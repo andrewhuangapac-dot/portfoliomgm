@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>投資組合 (Google Sheets 同步版)</title>
+    <title>投資組合管理 (Google Sheets 同步版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
+        /* 台灣股市習慣：紅漲綠跌 */
         .text-up { color: #ef4444; } 
         .text-down { color: #22c55e; }
         .bg-up { background-color: #fee2e2; color: #b91c1c; }
         .bg-down { background-color: #dcfce7; color: #15803d; }
+        
+        /* Loading 動畫 */
         .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #3498db; width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
         @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -37,12 +40,12 @@
             <p class="text-gray-500 text-sm">數據儲存於 Google 試算表</p>
         </div>
         <div class="space-x-2">
-            <button @click="fetchData" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium">🔄 同步數據</button>
-            <button @click="saveData" class="px-4 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm font-medium">💾 立即儲存</button>
+            <button @click="fetchData" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium transition">🔄 同步數據</button>
+            <button @click="saveData" class="px-4 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm font-medium transition">💾 立即儲存</button>
         </div>
     </header>
 
-    <div v-if="unsavedChanges" class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+    <div v-if="unsavedChanges" class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 animate-pulse">
         <div class="flex">
             <div class="flex-shrink-0">⚠️</div>
             <div class="ml-3">
@@ -70,13 +73,15 @@
             </p>
         </div>
         <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-gray-500">
-            <h3 class="text-gray-500 text-sm font-medium">總資產</h3>
+            <h3 class="text-gray-500 text-sm font-medium">總資產 (現金+持倉)</h3>
             <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(dashboard.cash + dashboard.investedAmount) }}</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
         <div class="lg:col-span-2 space-y-8">
+            
             <div class="bg-white p-6 rounded-lg shadow-sm">
                 <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
                     <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
@@ -115,6 +120,7 @@
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
                     <h2 class="font-bold text-gray-800">當前持倉 (Holdings)</h2>
+                    <span class="text-xs text-gray-500">*平均成本法計算</span>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
@@ -154,6 +160,8 @@
                                 <th class="p-3">代號</th>
                                 <th class="p-3 text-right">價格</th>
                                 <th class="p-3 text-right">股數</th>
+                                <th class="p-3 text-right">總金額</th>
+                                <th class="p-3 text-right">損益 (P&L)</th>
                                 <th class="p-3 text-center">操作</th>
                             </tr>
                         </thead>
@@ -168,6 +176,18 @@
                                 <td class="p-3 font-medium">{{ t.symbol }}</td>
                                 <td class="p-3 text-right">{{ formatCurrency(t.price) }}</td>
                                 <td class="p-3 text-right">{{ t.shares }}</td>
+                                <td class="p-3 text-right text-gray-500">{{ formatCurrency(t.totalAmount) }}</td>
+                                
+                                <td class="p-3 text-right font-bold">
+                                    <span v-if="t.type === 'sell'" :class="t.realizedPnL >= 0 ? 'text-up' : 'text-down'">
+                                        {{ t.realizedPnL >= 0 ? '+' : '' }}{{ formatCurrency(t.realizedPnL) }}
+                                        <span class="text-xs font-normal text-gray-400 block">
+                                            ({{ t.roi.toFixed(1) }}%)
+                                        </span>
+                                    </span>
+                                    <span v-else class="text-gray-300">-</span>
+                                </td>
+
                                 <td class="p-3 text-center">
                                     <button @click="removeTransaction(t.id)" class="text-gray-400 hover:text-red-500">×</button>
                                 </td>
@@ -179,6 +199,7 @@
         </div>
 
         <div class="space-y-8">
+            
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div class="p-4 border-b bg-gray-50">
                     <h2 class="font-bold text-gray-800">月度損益統計</h2>
@@ -192,6 +213,9 @@
                             </div>
                             <div class="text-xs text-gray-400">交易量: {{ stat.count }} 筆</div>
                         </div>
+                    </div>
+                     <div v-if="Object.keys(dashboard.monthlyStats).length === 0" class="text-center text-gray-400 py-4">
+                        尚無賣出紀錄
                     </div>
                 </div>
             </div>
@@ -218,6 +242,7 @@
                     </table>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -231,11 +256,11 @@
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">金額 (負數代表出金)</label>
-                    <input type="number" v-model.number="cashForm.amount" class="w-full border rounded p-2">
+                    <input type="number" v-model.number="cashForm.amount" class="w-full border rounded p-2" placeholder="例如: 10000">
                 </div>
                 <div>
                     <label class="block text-xs text-gray-500 mb-1">備註</label>
-                    <input type="text" v-model="cashForm.note" class="w-full border rounded p-2">
+                    <input type="text" v-model="cashForm.note" class="w-full border rounded p-2" placeholder="例如: 初始資金">
                 </div>
                 <div class="flex space-x-2 mt-4">
                     <button @click="addCashAdjustment" class="flex-1 bg-blue-600 text-white py-2 rounded">確認</button>
@@ -250,18 +275,22 @@
 <script>
     const { createApp, reactive, computed, watch, onMounted, ref } = Vue;
 
-    // TODO: 請將這裡換成你的 Google Apps Script 網頁應用程式網址
+    // ==========================================
+    // TODO: 請替換成你的 Google Apps Script 網址
+    // ==========================================
     const API_URL = 'https://script.google.com/macros/s/AKfycbyzdP8JX6bWyHFL4pDbLBnq3iTe3I8pLKEdGjLSClfUMNnqQ8eJKLItM1X_mY7yoFoE/exec';
 
     createApp({
         setup() {
+            // 基礎狀態
             const transactions = ref([]);
             const cashAdjustments = ref([]);
             const showCashModal = ref(false);
             const isLoading = ref(false);
             const loadingMsg = ref('');
-            const unsavedChanges = ref(false); // 標記是否有未儲存的改動
+            const unsavedChanges = ref(false);
 
+            // 表單綁定
             const form = reactive({
                 date: new Date().toISOString().split('T')[0],
                 type: 'buy',
@@ -276,11 +305,17 @@
                 note: ''
             });
 
-            // 初始化時從 Google Sheet 讀取
+            // 初始化：從 Google Sheets 讀取數據
             onMounted(() => {
                 fetchData();
             });
 
+            // 標記變更
+            const markAsChanged = () => {
+                unsavedChanges.value = true;
+            };
+
+            // 從後端讀取
             const fetchData = async () => {
                 if (API_URL === 'YOUR_GOOGLE_SCRIPT_URL') {
                     alert('請先在程式碼中填入您的 Google Apps Script URL！');
@@ -296,7 +331,7 @@
 
                     transactions.value = data.transactions || [];
                     cashAdjustments.value = data.cashAdjustments || [];
-                    unsavedChanges.value = false; // 同步後，數據即為最新
+                    unsavedChanges.value = false;
                 } catch (e) {
                     alert('讀取失敗: ' + e.message);
                 } finally {
@@ -304,13 +339,11 @@
                 }
             };
 
+            // 儲存到後端
             const saveData = async () => {
                 isLoading.value = true;
                 loadingMsg.value = '正在儲存至 Google Sheets...';
                 try {
-                    // 使用 no-cors 模式或是標準 POST，Apps Script 通常需要字串化的 body
-                    // Apps Script Web App 跨域有時會有 CORS 限制，但 redirect 方式通常在 fetch 中可處理
-                    // 這裡使用 'text/plain' 避免複雜的 CORS preflight
                     const res = await fetch(API_URL + '?action=save', {
                         method: 'POST',
                         body: JSON.stringify({
@@ -333,12 +366,7 @@
                 }
             };
 
-            // 標記變更
-            const markAsChanged = () => {
-                unsavedChanges.value = true;
-            };
-
-            // 計算邏輯 (與之前版本相同)
+            // 核心邏輯：計算儀表板總覽數據 (總資產、總持倉、總損益)
             const dashboard = computed(() => {
                 const sorted = [...transactions.value].sort((a, b) => new Date(a.date) - new Date(b.date));
                 let cash = 0;
@@ -347,8 +375,10 @@
                 let totalRealizedPnL = 0;
                 let investedAmount = 0;
 
+                // 1. 計算現金調整
                 cashAdjustments.value.forEach(adj => cash += adj.amount);
 
+                // 2. 遍歷交易
                 sorted.forEach(t => {
                     const sym = t.symbol.toUpperCase();
                     if (!holdings[sym]) holdings[sym] = { shares: 0, totalCost: 0, avgCost: 0 };
@@ -363,20 +393,26 @@
                         cash += total;
                         const costBasis = holdings[sym].avgCost * t.shares;
                         const realized = total - costBasis;
+                        
                         totalRealizedPnL += realized;
+                        
+                        // 月度
                         const month = t.date.substring(0, 7);
                         if (!monthlyStats[month]) monthlyStats[month] = { pnl: 0, count: 0 };
                         monthlyStats[month].pnl += realized;
                         monthlyStats[month].count += 1;
+
                         holdings[sym].shares -= t.shares;
                         holdings[sym].totalCost -= costBasis;
                     }
                 });
 
+                // 計算當前投入成本
                 for (let sym in holdings) {
                     if (holdings[sym].shares > 0) investedAmount += holdings[sym].totalCost;
                 }
 
+                // 月份排序
                 const sortedMonthly = Object.keys(monthlyStats).sort().reverse().reduce((obj, key) => { 
                     obj[key] = monthlyStats[key]; 
                     return obj;
@@ -385,15 +421,56 @@
                 return { cash, holdings, monthlyStats: sortedMonthly, totalRealizedPnL, investedAmount };
             });
 
+            // 核心邏輯：計算每筆交易的詳細損益 (用於列表顯示)
             const sortedTransactions = computed(() => {
-                return [...transactions.value].sort((a, b) => new Date(b.date) - new Date(a.date));
+                // 1. 先按時間正序排列，以正確計算成本流動
+                const chronological = [...transactions.value].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const tempHoldings = {};
+                
+                // 2. 逐步計算
+                const processed = chronological.map(t => {
+                    const sym = t.symbol.toUpperCase();
+                    if (!tempHoldings[sym]) tempHoldings[sym] = { shares: 0, totalCost: 0, avgCost: 0 };
+                    
+                    let realizedPnL = 0;
+                    let roi = 0;
+                    const totalAmount = t.price * t.shares;
+
+                    if (t.type === 'buy') {
+                        tempHoldings[sym].totalCost += totalAmount;
+                        tempHoldings[sym].shares += t.shares;
+                        if (tempHoldings[sym].shares > 0) {
+                            tempHoldings[sym].avgCost = tempHoldings[sym].totalCost / tempHoldings[sym].shares;
+                        }
+                    } else {
+                        const costBasis = tempHoldings[sym].avgCost * t.shares;
+                        realizedPnL = totalAmount - costBasis;
+                        if(costBasis > 0) roi = (realizedPnL / costBasis) * 100;
+
+                        tempHoldings[sym].shares -= t.shares;
+                        tempHoldings[sym].totalCost -= costBasis;
+                    }
+
+                    return {
+                        ...t,
+                        totalAmount: totalAmount,
+                        realizedPnL: realizedPnL,
+                        roi: roi
+                    };
+                });
+
+                // 3. 最後倒序排列 (最新的在最上面)
+                return processed.sort((a, b) => new Date(b.date) - new Date(a.date));
             });
+
             const sortedAdjustments = computed(() => {
                 return [...cashAdjustments.value].sort((a, b) => new Date(b.date) - new Date(a.date));
             });
 
+            // 操作方法
             const addTransaction = () => {
                 if (!form.symbol || !form.price || !form.shares) return alert('請填寫完整資訊');
+                
                 transactions.value.push({
                     id: Date.now(),
                     date: form.date,
@@ -402,6 +479,7 @@
                     price: parseFloat(form.price),
                     shares: parseFloat(form.shares)
                 });
+                
                 form.symbol = ''; form.price = ''; form.shares = '';
                 markAsChanged();
             };
