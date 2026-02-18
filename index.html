@@ -3,189 +3,135 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>投資組合 (新聞與論壇版)</title>
+    <title>AI 智能投資組合 (新聞+論壇)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; }
         .text-up { color: #ef4444; } 
         .text-down { color: #22c55e; }
-        .bg-up { background-color: #fee2e2; color: #b91c1c; }
-        .bg-down { background-color: #dcfce7; color: #15803d; }
-        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #3498db; width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
-        @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #6366f1; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Markdown 樣式 */
+        .prose h1, .prose h2, .prose h3 { font-weight: 700; color: #1e293b; margin-top: 1em; margin-bottom: 0.5em; }
+        .prose ul { list-style-type: disc; padding-left: 1.2em; margin-bottom: 1em; }
+        .prose p { margin-bottom: 0.8em; line-height: 1.7; color: #334155; }
+        .prose strong { color: #0f172a; font-weight: 700; }
+
+        /* AI 動畫 */
+        .ai-glow { box-shadow: 0 0 15px rgba(99, 102, 241, 0.5); animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
     </style>
 </head>
 <body>
 
 <div id="app" class="min-h-screen p-4 md:p-8 max-w-7xl mx-auto">
     
-    <div v-if="isLoading" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg shadow-xl flex flex-col items-center">
-            <div class="loader mb-3"></div>
-            <p class="text-gray-700 font-medium">{{ loadingMsg }}</p>
-        </div>
-    </div>
-
     <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">
                 投資組合管理
-                <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full border border-indigo-200">News & Forum</span>
+                <span class="bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full border border-indigo-200 flex items-center gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/><path d="M12 6a1 1 0 0 0-1 1v4.59L7.71 14.88a1 1 0 0 0 1.41 1.41l3.59-3.58A1 1 0 0 0 13 12V7a1 1 0 0 0-1-1z"/></svg>
+                    AI Agent
+                </span>
             </h1>
-            <p class="text-gray-500 text-sm">數據同步 + 市場情報</p>
+            <p class="text-slate-500 text-sm">新聞輿情 • 論壇風向 • 自動分析</p>
         </div>
-        <div class="space-x-2">
-            <button @click="fetchData" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium transition">🔄 同步數據</button>
-            <button @click="saveData" class="px-4 py-2 bg-green-100 text-green-700 rounded hover:bg-green-200 text-sm font-medium transition">💾 立即儲存</button>
+        <div class="flex gap-2">
+            <button @click="resetPassword" class="px-3 py-2 text-xs text-gray-400 hover:text-gray-600 underline">重設密碼</button>
+            <button @click="fetchData" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded shadow-sm hover:bg-slate-50 text-sm font-medium transition flex items-center gap-2">
+                <span v-if="isLoading" class="loader w-4 h-4 border-slate-400 border-t-transparent"></span>
+                <span>{{ isLoading ? '同步中...' : '🔄 同步數據' }}</span>
+            </button>
+            <button @click="saveData" class="px-4 py-2 bg-slate-800 text-white rounded shadow-md hover:bg-slate-900 text-sm font-medium transition">💾 儲存變更</button>
         </div>
     </header>
 
-    <div v-if="unsavedChanges" class="mb-4 bg-yellow-50 border-l-4 border-yellow-400 p-4 animate-pulse">
-        <div class="flex">
-            <div class="flex-shrink-0">⚠️</div>
-            <div class="ml-3">
-                <p class="text-sm text-yellow-700">
-                    您有未儲存的更動。請點擊上方「立即儲存」將資料寫回 Google Sheets，否則重新整理後將會遺失。
-                </p>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">可用現金</h3>
+            <div class="flex justify-between items-end mt-2">
+                <p class="text-2xl font-bold text-slate-800">{{ formatCurrency(dashboard.cash) }}</p>
+                <button @click="showCashModal = true" class="text-xs text-indigo-600 hover:bg-indigo-50 px-2 py-1 rounded transition">調整資金</button>
             </div>
         </div>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-blue-500">
-            <h3 class="text-gray-500 text-sm font-medium">可用現金 (Cash)</h3>
-            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(dashboard.cash) }}</p>
-            <button @click="showCashModal = true" class="text-xs text-blue-600 mt-2 hover:underline">調整資金 (+/-)</button>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">持倉成本</h3>
+            <p class="text-2xl font-bold text-slate-800 mt-2">{{ formatCurrency(dashboard.investedAmount) }}</p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-purple-500">
-            <h3 class="text-gray-500 text-sm font-medium">持倉成本 (Cost Basis)</h3>
-            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(dashboard.investedAmount) }}</p>
-        </div>
-        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4" :class="dashboard.totalRealizedPnL >= 0 ? 'border-red-500' : 'border-green-500'">
-            <h3 class="text-gray-500 text-sm font-medium">累計已實現損益</h3>
-            <p class="text-2xl font-bold" :class="dashboard.totalRealizedPnL >= 0 ? 'text-up' : 'text-down'">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">已實現損益</h3>
+            <p class="text-2xl font-bold mt-2" :class="dashboard.totalRealizedPnL >= 0 ? 'text-up' : 'text-down'">
                 {{ dashboard.totalRealizedPnL >= 0 ? '+' : '' }}{{ formatCurrency(dashboard.totalRealizedPnL) }}
             </p>
         </div>
-        <div class="bg-white p-6 rounded-lg shadow-sm border-l-4 border-gray-500">
-            <h3 class="text-gray-500 text-sm font-medium">總資產 (現金+持倉)</h3>
-            <p class="text-2xl font-bold text-gray-800">{{ formatCurrency(dashboard.cash + dashboard.investedAmount) }}</p>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">總資產</h3>
+            <p class="text-2xl font-bold text-slate-800 mt-2">{{ formatCurrency(dashboard.cash + dashboard.investedAmount) }}</p>
         </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <div class="lg:col-span-2 space-y-8">
+        <div class="lg:col-span-2 space-y-6">
             
-            <div class="bg-white p-6 rounded-lg shadow-sm">
-                <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                    新增交易紀錄
-                </h2>
-                <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
-                    <div class="col-span-2 md:col-span-1">
-                        <label class="block text-xs text-gray-500 mb-1">日期</label>
-                        <input type="date" v-model="form.date" class="w-full border rounded p-2 text-sm">
-                    </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <label class="block text-xs text-gray-500 mb-1">類型</label>
-                        <select v-model="form.type" class="w-full border rounded p-2 text-sm">
-                            <option value="buy">買入 (Buy)</option>
-                            <option value="sell">賣出 (Sell)</option>
-                        </select>
-                    </div>
-                    <div class="col-span-2 md:col-span-1">
-                        <label class="block text-xs text-gray-500 mb-1">代號</label>
-                        <input type="text" v-model="form.symbol" placeholder="如 AAPL" class="w-full border rounded p-2 text-sm uppercase">
-                    </div>
-                    <div class="col-span-1">
-                        <label class="block text-xs text-gray-500 mb-1">價格</label>
-                        <input type="number" step="0.01" v-model.number="form.price" class="w-full border rounded p-2 text-sm">
-                    </div>
-                    <div class="col-span-1">
-                        <label class="block text-xs text-gray-500 mb-1">股數</label>
-                        <input type="number" v-model.number="form.shares" class="w-full border rounded p-2 text-sm">
-                    </div>
-                    <div class="col-span-2 md:col-span-1 flex items-end">
-                        <button @click="addTransaction" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 text-sm font-medium">新增</button>
-                    </div>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase">新增交易紀錄</h2>
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+                    <div class="col-span-2 md:col-span-1"><input type="date" v-model="form.date" class="w-full border border-slate-300 rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></div>
+                    <div class="col-span-2 md:col-span-1"><select v-model="form.type" class="w-full border border-slate-300 rounded p-2 text-sm"><option value="buy">買入</option><option value="sell">賣出</option></select></div>
+                    <div class="col-span-2 md:col-span-1"><input type="text" v-model="form.symbol" placeholder="代號 (如 2330)" class="w-full border border-slate-300 rounded p-2 text-sm uppercase"></div>
+                    <div class="col-span-1"><input type="number" step="0.01" v-model.number="form.price" placeholder="價格" class="w-full border border-slate-300 rounded p-2 text-sm"></div>
+                    <div class="col-span-1"><input type="number" v-model.number="form.shares" placeholder="股數" class="w-full border border-slate-300 rounded p-2 text-sm"></div>
+                    <div class="col-span-2 md:col-span-1"><button @click="addTransaction" class="w-full bg-indigo-600 text-white p-2 rounded hover:bg-indigo-700 text-sm font-medium transition">新增</button></div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                    <h2 class="font-bold text-gray-800">當前持倉 (Holdings)</h2>
-                    <span class="text-xs text-gray-500">*點擊「資訊」查看新聞</span>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                    <h2 class="font-bold text-slate-700 text-sm">當前持倉</h2>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
-                        <thead class="bg-gray-50 text-gray-500">
-                            <tr>
-                                <th class="p-3">代號</th>
-                                <th class="p-3 text-right">持有股數</th>
-                                <th class="p-3 text-right">平均成本</th>
-                                <th class="p-3 text-center">操作</th>
-                            </tr>
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs">
+                            <tr><th class="p-3">代號</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">平均成本</th><th class="p-3 text-center">AI 分析</th></tr>
                         </thead>
-                        <tbody class="divide-y">
-                            <tr v-for="(holding, symbol) in dashboard.holdings" :key="symbol" v-show="holding.shares > 0">
-                                <td class="p-3 font-bold">{{ symbol }}</td>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="(holding, symbol) in dashboard.holdings" :key="symbol" v-show="holding.shares > 0" class="hover:bg-slate-50">
+                                <td class="p-3 font-bold text-slate-700">{{ symbol }}</td>
                                 <td class="p-3 text-right">{{ holding.shares }}</td>
-                                <td class="p-3 text-right">{{ formatCurrency(holding.avgCost, 3) }}</td>
+                                <td class="p-3 text-right text-slate-500">{{ formatCurrency(holding.avgCost, 2) }}</td>
                                 <td class="p-3 text-center">
-                                    <button @click="openNewsModal(symbol)" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200 text-xs font-medium">
-                                        📰 資訊
+                                    <button @click="openAIModal(symbol)" class="group bg-white border border-indigo-200 text-indigo-600 px-3 py-1 rounded-full text-xs hover:bg-indigo-50 hover:border-indigo-300 transition flex items-center gap-1 mx-auto shadow-sm">
+                                        <span class="group-hover:scale-110 transition-transform">✨</span> AI 解讀
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-if="Object.keys(dashboard.holdings).length === 0 || Object.values(dashboard.holdings).every(h => h.shares <= 0)">
-                                <td colspan="4" class="p-8 text-center text-gray-400">尚無持倉數據</td>
-                            </tr>
+                            <tr v-if="Object.keys(dashboard.holdings).length === 0"><td colspan="4" class="p-8 text-center text-slate-400">目前無持倉</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div class="p-4 border-b bg-gray-50">
-                    <h2 class="font-bold text-gray-800">交易紀錄明細</h2>
-                </div>
+             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 bg-slate-50"><h2 class="font-bold text-slate-700 text-sm">交易明細</h2></div>
                 <div class="overflow-x-auto max-h-96 overflow-y-auto">
                     <table class="w-full text-sm text-left">
-                        <thead class="bg-gray-50 text-gray-500 sticky top-0">
-                            <tr>
-                                <th class="p-3">日期</th>
-                                <th class="p-3">類型</th>
-                                <th class="p-3">代號</th>
-                                <th class="p-3 text-right">價格</th>
-                                <th class="p-3 text-right">股數</th>
-                                <th class="p-3 text-right">損益 (P&L)</th>
-                                <th class="p-3 text-center">操作</th>
-                            </tr>
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs sticky top-0">
+                            <tr><th class="p-3">日期</th><th class="p-3">代號</th><th class="p-3">類別</th><th class="p-3 text-right">價格</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">損益</th><th class="p-3"></th></tr>
                         </thead>
-                        <tbody class="divide-y">
-                            <tr v-for="t in sortedTransactions" :key="t.id" class="hover:bg-gray-50">
-                                <td class="p-3 text-gray-600">{{ t.date }}</td>
-                                <td class="p-3">
-                                    <span :class="t.type === 'buy' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'" class="px-2 py-1 rounded text-xs font-bold uppercase">
-                                        {{ t.type === 'buy' ? '買入' : '賣出' }}
-                                    </span>
-                                </td>
-                                <td class="p-3 font-medium">{{ t.symbol }}</td>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="t in sortedTransactions" :key="t.id" class="hover:bg-slate-50">
+                                <td class="p-3 text-slate-500">{{ t.date }}</td>
+                                <td class="p-3 font-bold text-slate-700">{{ t.symbol }}</td>
+                                <td class="p-3"><span :class="t.type==='buy'?'bg-red-50 text-red-600 border-red-100':'bg-green-50 text-green-600 border-green-100'" class="px-2 py-0.5 rounded text-xs border">{{ t.type==='buy'?'買入':'賣出' }}</span></td>
                                 <td class="p-3 text-right">{{ formatCurrency(t.price) }}</td>
                                 <td class="p-3 text-right">{{ t.shares }}</td>
-                                <td class="p-3 text-right font-bold">
-                                    <span v-if="t.type === 'sell'" :class="t.realizedPnL >= 0 ? 'text-up' : 'text-down'">
-                                        {{ t.realizedPnL >= 0 ? '+' : '' }}{{ formatCurrency(t.realizedPnL) }}
-                                        <span class="text-xs font-normal text-gray-400 block">({{ t.roi.toFixed(1) }}%)</span>
-                                    </span>
-                                    <span v-else class="text-gray-300">-</span>
-                                </td>
-                                <td class="p-3 text-center">
-                                    <button @click="removeTransaction(t.id)" class="text-gray-400 hover:text-red-500">×</button>
-                                </td>
+                                <td class="p-3 text-right font-bold"><span v-if="t.type==='sell'" :class="t.realizedPnL>=0?'text-up':'text-down'">{{ t.realizedPnL>=0?'+':'' }}{{ formatCurrency(t.realizedPnL, 0) }}</span><span v-else class="text-slate-300">-</span></td>
+                                <td class="p-3 text-center"><button @click="removeTransaction(t.id)" class="text-slate-300 hover:text-red-500 transition">×</button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -193,418 +139,293 @@
             </div>
         </div>
 
-        <div class="space-y-8">
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                <div class="p-4 border-b bg-gray-50">
-                    <h2 class="font-bold text-gray-800">月度損益統計</h2>
+        <div class="space-y-6">
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
+                <h2 class="font-bold text-slate-700 border-b border-slate-100 pb-2 mb-2 text-sm uppercase">月度損益統計</h2>
+                <div v-for="(stat, month) in dashboard.monthlyStats" :key="month" class="flex justify-between py-2 border-b border-slate-50 last:border-0 text-sm">
+                    <span class="text-slate-600 font-medium">{{ month }}</span>
+                    <span :class="stat.pnl >= 0 ? 'text-up' : 'text-down'" class="font-bold">{{ stat.pnl >= 0 ? '+' : '' }}{{ formatCurrency(stat.pnl, 0) }}</span>
                 </div>
-                <div class="p-4">
-                    <div v-for="(stat, month) in dashboard.monthlyStats" :key="month" class="flex justify-between items-center py-3 border-b last:border-0">
-                        <span class="text-gray-600 font-medium">{{ month }}</span>
-                        <div class="text-right">
-                            <div :class="stat.pnl >= 0 ? 'text-up' : 'text-down'" class="font-bold text-lg">
-                                {{ stat.pnl >= 0 ? '+' : '' }}{{ formatCurrency(stat.pnl) }}
-                            </div>
-                            <div class="text-xs text-gray-400">交易量: {{ stat.count }} 筆</div>
+                <div v-if="Object.keys(dashboard.monthlyStats).length === 0" class="text-center text-slate-400 py-4 text-xs">尚無賣出紀錄</div>
+            </div>
+            
+            <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
+                    <h2 class="font-bold text-slate-700 text-sm uppercase">資金變動紀錄</h2>
+                </div>
+                <div class="max-h-64 overflow-y-auto space-y-2">
+                    <div v-for="adj in sortedAdjustments" :key="adj.id" class="flex justify-between text-sm py-1 border-b border-slate-50 last:border-0">
+                        <div class="flex flex-col">
+                            <span class="text-slate-400 text-xs">{{ adj.date }}</span>
+                            <span class="text-slate-700">{{ adj.note }}</span>
                         </div>
+                        <span :class="adj.amount>=0?'text-blue-600':'text-orange-600'" class="font-medium self-center">{{ adj.amount>=0?'+':''}}{{ formatCurrency(adj.amount, 0) }}</span>
                     </div>
                 </div>
             </div>
-
-            <div class="bg-white rounded-lg shadow-sm overflow-hidden">
-                 <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                    <h2 class="font-bold text-gray-800">資金變動紀錄</h2>
-                    <button @click="showCashModal = true" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">入/出金</button>
-                </div>
-                <div class="max-h-64 overflow-y-auto">
-                    <table class="w-full text-sm">
-                        <tbody class="divide-y">
-                            <tr v-for="adj in sortedAdjustments" :key="adj.id">
-                                <td class="p-3 text-gray-500">{{ adj.date }}</td>
-                                <td class="p-3">{{ adj.note }}</td>
-                                <td class="p-3 text-right font-bold" :class="adj.amount >= 0 ? 'text-blue-600' : 'text-orange-600'">
-                                    {{ adj.amount >= 0 ? '+' : '' }}{{ formatCurrency(adj.amount) }}
-                                </td>
-                                <td class="p-3 text-right">
-                                    <button @click="removeAdjustment(adj.id)" class="text-gray-300 hover:text-red-500">×</button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     </div>
 
-    <div v-if="showCashModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
-            <h3 class="text-lg font-bold mb-4">資金調整</h3>
-            <div class="space-y-3">
-                <input type="date" v-model="cashForm.date" class="w-full border rounded p-2">
-                <input type="number" v-model.number="cashForm.amount" class="w-full border rounded p-2" placeholder="金額 (負數為出金)">
-                <input type="text" v-model="cashForm.note" class="w-full border rounded p-2" placeholder="備註">
-                <div class="flex space-x-2 mt-4">
-                    <button @click="addCashAdjustment" class="flex-1 bg-blue-600 text-white py-2 rounded">確認</button>
-                    <button @click="showCashModal = false" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded">取消</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div v-if="showNewsModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
-            <div class="p-4 bg-indigo-600 text-white flex justify-between items-center">
-                <div>
-                    <h3 class="text-xl font-bold flex items-center gap-2">
-                        {{ selectedSymbol }} 市場情報
-                        <span class="text-xs bg-indigo-500 px-2 py-0.5 rounded text-indigo-100">Live</span>
-                    </h3>
-                </div>
-                <button @click="showNewsModal = false" class="text-indigo-200 hover:text-white text-2xl">&times;</button>
+    <div v-if="showAIModal" class="fixed inset-0 bg-slate-900 bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden relative border border-slate-200">
+            <div class="p-5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white flex justify-between items-center">
+                <h3 class="text-lg font-bold flex items-center gap-2">
+                    <span>🤖</span> AI 投資助理 - {{ selectedSymbol }}
+                </h3>
+                <button @click="showAIModal = false" class="text-indigo-100 hover:text-white text-2xl transition">&times;</button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-0 md:flex">
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
                 
-                <div class="md:w-2/3 p-4 md:p-6 border-b md:border-b-0 md:border-r border-gray-200 bg-gray-50">
-                    <h4 class="font-bold text-gray-700 mb-4 flex items-center">
-                        <span class="mr-2">📰</span> 最新新聞 (Google News)
-                    </h4>
-                    
-                    <div v-if="newsLoading" class="flex justify-center py-8">
-                        <div class="loader border-indigo-500"></div>
+                <div v-if="aiLoading" class="flex flex-col items-center justify-center py-12 space-y-6">
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center ai-glow">
+                        <div class="loader"></div>
                     </div>
-                    
-                    <div v-else-if="newsList.length === 0" class="text-center text-gray-500 py-8">
-                        暫無相關新聞，或 Google News 無法讀取。
-                    </div>
-
-                    <div v-else class="space-y-4">
-                        <a v-for="(item, index) in newsList" :key="index" :href="item.link" target="_blank" class="block bg-white p-4 rounded shadow-sm hover:shadow-md transition border hover:border-indigo-300 group">
-                            <h5 class="font-bold text-gray-800 group-hover:text-indigo-600 mb-1 leading-snug">{{ item.title }}</h5>
-                            <div class="flex justify-between items-center mt-2">
-                                <span class="text-xs text-gray-400">{{ item.pubDate }}</span>
-                                <span class="text-xs text-indigo-500 font-medium">閱讀全文 &rarr;</span>
-                            </div>
-                        </a>
+                    <div class="text-center">
+                        <p class="text-indigo-800 font-bold text-lg">AI 正在搜尋新聞與論壇...</p>
+                        <p class="text-slate-500 text-sm mt-1">搜尋 Google News • 爬取 Reddit / 論壇報導 • 綜合分析</p>
                     </div>
                 </div>
 
-                <div class="md:w-1/3 p-4 md:p-6 bg-white">
-                    <h4 class="font-bold text-gray-700 mb-4 flex items-center">
-                        <span class="mr-2">💬</span> 論壇與討論區 (傳送門)
-                    </h4>
-                    <p class="text-xs text-gray-500 mb-4">點擊下方按鈕前往各大論壇搜尋該標的：</p>
-
-                    <div class="grid grid-cols-1 gap-3">
-                        <div v-if="isTaiwanStock(selectedSymbol)" class="space-y-3">
-                            <a :href="`https://www.google.com/search?q=${selectedSymbol}+site:ptt.cc`" target="_blank" class="flex items-center justify-center w-full py-3 bg-gray-800 text-white rounded hover:bg-black transition">
-                                <span class="mr-2">📺</span> PTT 討論 (Google)
-                            </a>
-                            <a :href="`https://tw.stock.yahoo.com/quote/${selectedSymbol}/discussion`" target="_blank" class="flex items-center justify-center w-full py-3 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
-                                <span class="mr-2">Y!</span> Yahoo 股市討論區
-                            </a>
-                            <a :href="`https://www.mobile01.com/googlesearch.php?q=${selectedSymbol}`" target="_blank" class="flex items-center justify-center w-full py-3 bg-green-600 text-white rounded hover:bg-green-700 transition">
-                                <span class="mr-2">📱</span> Mobile01 理財版
-                            </a>
+                <div v-else>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-indigo-100 mb-6">
+                        <div class="flex items-center gap-2 mb-4">
+                            <span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-xs font-bold border border-indigo-100">Gemini 1.5 Flash</span>
+                            <span class="text-slate-400 text-xs">AI Market Analysis</span>
                         </div>
+                        <div class="prose prose-sm max-w-none" v-html="aiContentParsed"></div>
+                    </div>
 
-                        <div v-else class="space-y-3">
-                            <a :href="`https://www.reddit.com/search/?q=$${selectedSymbol}`" target="_blank" class="flex items-center justify-center w-full py-3 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
-                                <span class="mr-2">🤖</span> Reddit ($ {{selectedSymbol}})
-                            </a>
-                            <a :href="`https://finance.yahoo.com/quote/${selectedSymbol}/community`" target="_blank" class="flex items-center justify-center w-full py-3 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
-                                <span class="mr-2">Y!</span> Yahoo Finance
-                            </a>
-                        </div>
-
-                        <hr class="border-gray-100 my-2">
-                        <a :href="`https://www.google.com/search?q=${selectedSymbol}+stock`" target="_blank" class="flex items-center justify-center w-full py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition">
-                            <span class="mr-2">🔍</span> Google 搜尋
-                        </a>
-                        <a :href="`https://www.tradingview.com/chart/?symbol=${selectedSymbol}`" target="_blank" class="flex items-center justify-center w-full py-3 bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
-                            <span class="mr-2">📈</span> TradingView 線圖
-                        </a>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <a :href="`https://www.google.com/search?q=${selectedSymbol}+site:ptt.cc`" target="_blank" class="flex items-center justify-center py-2 bg-slate-800 text-white rounded-lg text-xs hover:bg-slate-900 transition">PTT 討論</a>
+                        <a :href="`https://tw.stock.yahoo.com/quote/${selectedSymbol}/discussion`" target="_blank" class="flex items-center justify-center py-2 bg-purple-600 text-white rounded-lg text-xs hover:bg-purple-700 transition">Yahoo 討論</a>
+                        <a :href="`https://www.mobile01.com/googlesearch.php?q=${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2 bg-green-600 text-white rounded-lg text-xs hover:bg-green-700 transition">Mobile01</a>
+                        <a :href="`https://www.google.com/search?q=${selectedSymbol}+stock+news`" target="_blank" class="flex items-center justify-center py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs hover:bg-blue-100 transition">更多新聞</a>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <div v-if="showCashModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-6 rounded-lg w-80 shadow-xl">
+            <h3 class="font-bold mb-4 text-slate-700">資金調整</h3>
+            <input type="date" v-model="cashForm.date" class="w-full border rounded p-2 mb-2 text-sm">
+            <input type="number" v-model.number="cashForm.amount" class="w-full border rounded p-2 mb-2 text-sm" placeholder="金額 (負數為出金)">
+            <input type="text" v-model="cashForm.note" class="w-full border rounded p-2 mb-4 text-sm" placeholder="備註 (例如: 入金)">
+            <div class="flex gap-2"><button @click="addCashAdjustment" class="flex-1 bg-indigo-600 text-white py-2 rounded text-sm hover:bg-indigo-700">確認</button><button @click="showCashModal = false" class="flex-1 bg-slate-100 text-slate-600 py-2 rounded text-sm hover:bg-slate-200">取消</button></div>
         </div>
     </div>
 
 </div>
 
 <script>
-    const { createApp, reactive, computed, watch, onMounted, ref } = Vue;
+    const { createApp, reactive, computed, onMounted, ref } = Vue;
 
     // ==========================================
-    // TODO: 請替換成你的 Google Apps Script 網址
+    // 🔴 設定區 (請務必修改這裡)
     // ==========================================
     const API_URL = 'https://script.google.com/macros/s/AKfycbyzdP8JX6bWyHFL4pDbLBnq3iTe3I8pLKEdGjLSClfUMNnqQ8eJKLItM1X_mY7yoFoE/exec';
-
+    // ==========================================
 
     createApp({
         setup() {
-            // 基礎狀態
             const transactions = ref([]);
             const cashAdjustments = ref([]);
             const showCashModal = ref(false);
             const isLoading = ref(false);
-            const loadingMsg = ref('');
-            const unsavedChanges = ref(false);
+            
+            // 安全性：密碼管理
+            const password = ref(localStorage.getItem('portfolio_password') || '');
 
-            // 新增：新聞與 Modal 狀態
-            const showNewsModal = ref(false);
+            // AI 相關
+            const showAIModal = ref(false);
+            const aiLoading = ref(false);
             const selectedSymbol = ref('');
-            const newsList = ref([]);
-            const newsLoading = ref(false);
+            const aiContent = ref('');
 
-            const form = reactive({
-                date: new Date().toISOString().split('T')[0],
-                type: 'buy',
-                symbol: '',
-                price: '',
-                shares: ''
-            });
-
-            const cashForm = reactive({
-                date: new Date().toISOString().split('T')[0],
-                amount: '',
-                note: ''
-            });
+            const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
+            const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
 
             onMounted(() => {
-                fetchData();
+                if (password.value) fetchData();
             });
 
-            const markAsChanged = () => unsavedChanges.value = true;
-
-            const fetchData = async () => {
-                if (API_URL === 'YOUR_GOOGLE_SCRIPT_URL') {
-                    alert('請先在程式碼中填入您的 Google Apps Script URL！');
-                    return;
+            // 密碼檢查邏輯
+            const checkPassword = () => {
+                if (!password.value) {
+                    const input = prompt('請輸入存取密碼 (Access Password)：');
+                    if (input) {
+                        password.value = input;
+                        localStorage.setItem('portfolio_password', input);
+                    } else {
+                        alert('需要密碼才能存取數據。');
+                        return false;
+                    }
                 }
+                return true;
+            };
+
+            const resetPassword = () => {
+                localStorage.removeItem('portfolio_password');
+                password.value = '';
+                alert('密碼已清除，下次操作需重新輸入。');
+            };
+
+            // Markdown
+            const aiContentParsed = computed(() => {
+                return aiContent.value ? marked.parse(aiContent.value) : '';
+            });
+
+            // API: 讀取
+            const fetchData = async () => {
+                if (!checkPassword()) return;
+                if (API_URL === 'YOUR_GOOGLE_SCRIPT_URL') return alert('請先設定 API URL！');
+                
                 isLoading.value = true;
-                loadingMsg.value = '正在從 Google Sheets 同步資料...';
                 try {
-                    const res = await fetch(`${API_URL}?action=read`);
+                    // 透過 URL 參數傳遞 password
+                    const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
                     const data = await res.json();
-                    if(data.status === 'error') throw new Error(data.message);
+                    
+                    if (data.status === 'error') {
+                        throw new Error(data.message);
+                    }
+                    
                     transactions.value = data.transactions || [];
                     cashAdjustments.value = data.cashAdjustments || [];
-                    unsavedChanges.value = false;
                 } catch (e) {
-                    alert('讀取失敗: ' + e.message);
+                    // 如果密碼錯誤，清除本地密碼
+                    if(e.message.includes('密碼錯誤')) resetPassword();
+                    alert(e.message);
                 } finally {
                     isLoading.value = false;
                 }
             };
 
+            // API: 儲存
             const saveData = async () => {
-                isLoading.value = true;
-                loadingMsg.value = '正在儲存至 Google Sheets...';
+                if (!checkPassword()) return;
+                if(!confirm('確定要儲存變更嗎？')) return;
+                
                 try {
-                    const res = await fetch(API_URL + '?action=save', {
-                        method: 'POST',
-                        body: JSON.stringify({
-                            transactions: transactions.value,
-                            cashAdjustments: cashAdjustments.value
-                        })
+                    const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, {
+                        method: 'POST', 
+                        body: JSON.stringify({ transactions: transactions.value, cashAdjustments: cashAdjustments.value })
                     });
-                    const result = await res.json();
-                    if (result.status === 'success') {
-                        unsavedChanges.value = false;
-                        alert('儲存成功！');
-                    } else {
-                        throw new Error(result.message);
-                    }
-                } catch (e) {
-                    alert('儲存失敗: ' + e.message);
-                } finally {
-                    isLoading.value = false;
+                    const data = await res.json();
+                    if(data.status === 'error') throw new Error(data.message);
+                    alert('儲存成功！');
+                } catch (e) { 
+                    alert('儲存失敗: ' + e.message); 
                 }
             };
 
-            // ========== 新增功能：新聞與論壇邏輯 ==========
-
-            // 判斷是否為台股 (假設全是數字為台股，否則為美股)
-            const isTaiwanStock = (symbol) => {
-                return /^\d+/.test(symbol);
-            };
-
-            const openNewsModal = async (symbol) => {
+            // API: AI 分析
+            const openAIModal = async (symbol) => {
+                if (!checkPassword()) return;
+                
                 selectedSymbol.value = symbol;
-                showNewsModal.value = true;
-                newsLoading.value = true;
-                newsList.value = [];
+                showAIModal.value = true;
+                aiLoading.value = true;
+                aiContent.value = '';
 
                 try {
-                    // 使用 RSS 轉 JSON 服務來繞過 CORS 並讀取 Google News
-                    // 根據是否為台股，調整搜尋關鍵字以獲得更精準的中文或英文新聞
-                    let query = symbol;
-                    if (isTaiwanStock(symbol)) {
-                        // 台股：搜尋 "2330" 或 "2330 股"
-                        query = `${symbol}`; 
-                    } else {
-                        // 美股：搜尋 "AAPL stock"
-                        query = `${symbol} stock`;
-                    }
-
-                    // 台灣地區 + 繁體中文
-                    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
-                    
-                    // 使用 rss2json API (免費版有限制，但個人使用通常足夠)
-                    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
-                    
-                    const res = await fetch(apiUrl);
+                    const res = await fetch(`${API_URL}?action=analyze&symbol=${symbol}&password=${encodeURIComponent(password.value)}`);
                     const data = await res.json();
                     
-                    if (data.status === 'ok') {
-                        // 只取前 10 則，並簡單格式化日期
-                        newsList.value = data.items.slice(0, 10).map(item => ({
-                            title: item.title,
-                            link: item.link,
-                            pubDate: item.pubDate.split(' ')[0] // 只取日期部分
-                        }));
+                    if (data.status === 'success') {
+                        aiContent.value = data.analysis;
+                    } else {
+                        aiContent.value = `**分析失敗**：${data.message || '未知錯誤'}`;
                     }
                 } catch (e) {
-                    console.error("新聞讀取失敗", e);
+                    aiContent.value = `**連線錯誤**：${e.message}`;
                 } finally {
-                    newsLoading.value = false;
+                    aiLoading.value = false;
                 }
             };
-            // ==========================================
 
+            // 核心計算邏輯
             const dashboard = computed(() => {
-                const sorted = [...transactions.value].sort((a, b) => new Date(a.date) - new Date(b.date));
                 let cash = 0;
-                let holdings = {}; 
-                let monthlyStats = {}; 
+                let holdings = {};
                 let totalRealizedPnL = 0;
                 let investedAmount = 0;
+                let monthlyStats = {};
 
                 cashAdjustments.value.forEach(adj => cash += adj.amount);
-
+                
+                const sorted = [...transactions.value].sort((a,b) => new Date(a.date)-new Date(b.date));
                 sorted.forEach(t => {
                     const sym = t.symbol.toUpperCase();
-                    if (!holdings[sym]) holdings[sym] = { shares: 0, totalCost: 0, avgCost: 0 };
-                    const total = t.price * t.shares;
-
-                    if (t.type === 'buy') {
-                        cash -= total;
-                        holdings[sym].totalCost += total;
+                    if(!holdings[sym]) holdings[sym] = {shares:0, totalCost:0, avgCost:0};
+                    const amt = t.price * t.shares;
+                    
+                    if(t.type === 'buy') {
+                        cash -= amt;
+                        holdings[sym].totalCost += amt;
                         holdings[sym].shares += t.shares;
-                        if (holdings[sym].shares > 0) holdings[sym].avgCost = holdings[sym].totalCost / holdings[sym].shares;
-                    } else if (t.type === 'sell') {
-                        cash += total;
-                        const costBasis = holdings[sym].avgCost * t.shares;
-                        const realized = total - costBasis;
-                        totalRealizedPnL += realized;
-                        const month = t.date.substring(0, 7);
-                        if (!monthlyStats[month]) monthlyStats[month] = { pnl: 0, count: 0 };
-                        monthlyStats[month].pnl += realized;
-                        monthlyStats[month].count += 1;
+                        if(holdings[sym].shares>0) holdings[sym].avgCost = holdings[sym].totalCost/holdings[sym].shares;
+                    } else {
+                        cash += amt;
+                        const cost = holdings[sym].avgCost * t.shares;
+                        const pnl = amt - cost;
+                        totalRealizedPnL += pnl;
+                        const m = t.date.substring(0,7);
+                        if(!monthlyStats[m]) monthlyStats[m] = {pnl:0};
+                        monthlyStats[m].pnl += pnl;
                         holdings[sym].shares -= t.shares;
-                        holdings[sym].totalCost -= costBasis;
+                        holdings[sym].totalCost -= cost;
                     }
                 });
 
-                for (let sym in holdings) {
-                    if (holdings[sym].shares > 0) investedAmount += holdings[sym].totalCost;
-                }
+                for(let s in holdings) if(holdings[s].shares>0) investedAmount += holdings[s].totalCost;
+                
+                // 月份倒序
+                const sortedMonthly = Object.keys(monthlyStats).sort().reverse().reduce((obj, key) => { obj[key] = monthlyStats[key]; return obj; }, {});
 
-                const sortedMonthly = Object.keys(monthlyStats).sort().reverse().reduce((obj, key) => { 
-                    obj[key] = monthlyStats[key]; 
-                    return obj;
-                }, {});
-
-                return { cash, holdings, monthlyStats: sortedMonthly, totalRealizedPnL, investedAmount };
+                return { cash, holdings, totalRealizedPnL, investedAmount, monthlyStats: sortedMonthly };
             });
 
             const sortedTransactions = computed(() => {
-                const chronological = [...transactions.value].sort((a, b) => new Date(a.date) - new Date(b.date));
+                const chronological = [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date));
                 const tempHoldings = {};
-                
-                const processed = chronological.map(t => {
+                const res = chronological.map(t => {
                     const sym = t.symbol.toUpperCase();
-                    if (!tempHoldings[sym]) tempHoldings[sym] = { shares: 0, totalCost: 0, avgCost: 0 };
-                    
+                    if(!tempHoldings[sym]) tempHoldings[sym] = {shares:0, totalCost:0, avgCost:0};
                     let realizedPnL = 0;
-                    let roi = 0;
-                    const totalAmount = t.price * t.shares;
-
-                    if (t.type === 'buy') {
-                        tempHoldings[sym].totalCost += totalAmount;
-                        tempHoldings[sym].shares += t.shares;
-                        if (tempHoldings[sym].shares > 0) {
-                            tempHoldings[sym].avgCost = tempHoldings[sym].totalCost / tempHoldings[sym].shares;
-                        }
+                    const amt = t.price * t.shares;
+                    if(t.type==='buy'){
+                         tempHoldings[sym].totalCost+=amt; tempHoldings[sym].shares+=t.shares;
+                         if(tempHoldings[sym].shares>0) tempHoldings[sym].avgCost=tempHoldings[sym].totalCost/tempHoldings[sym].shares;
                     } else {
-                        const costBasis = tempHoldings[sym].avgCost * t.shares;
-                        realizedPnL = totalAmount - costBasis;
-                        if(costBasis > 0) roi = (realizedPnL / costBasis) * 100;
-                        tempHoldings[sym].shares -= t.shares;
-                        tempHoldings[sym].totalCost -= costBasis;
+                        const cost = tempHoldings[sym].avgCost * t.shares;
+                        realizedPnL = amt - cost;
+                        tempHoldings[sym].shares-=t.shares; tempHoldings[sym].totalCost-=cost;
                     }
-                    return { ...t, totalAmount, realizedPnL, roi };
+                    return {...t, realizedPnL};
                 });
-                return processed.sort((a, b) => new Date(b.date) - new Date(a.date));
+                return res.sort((a,b)=>new Date(b.date)-new Date(a.date));
             });
-
-            const sortedAdjustments = computed(() => {
-                return [...cashAdjustments.value].sort((a, b) => new Date(b.date) - new Date(a.date));
-            });
+            
+            const sortedAdjustments = computed(() => [...cashAdjustments.value].sort((a,b)=>new Date(b.date)-new Date(a.date)));
 
             const addTransaction = () => {
-                if (!form.symbol || !form.price || !form.shares) return alert('請填寫完整資訊');
-                transactions.value.push({
-                    id: Date.now(),
-                    date: form.date,
-                    type: form.type,
-                    symbol: form.symbol.toUpperCase(),
-                    price: parseFloat(form.price),
-                    shares: parseFloat(form.shares)
-                });
-                form.symbol = ''; form.price = ''; form.shares = '';
-                markAsChanged();
+                if(!form.symbol) return;
+                transactions.value.push({ id:Date.now(), date:form.date, type:form.type, symbol:form.symbol.toUpperCase(), price:form.price, shares:form.shares });
+                form.symbol=''; form.price=''; form.shares='';
             };
+            const removeTransaction = (id) => { if(confirm('刪除?')) transactions.value=transactions.value.filter(t=>t.id!==id); };
+            const addCashAdjustment = () => { cashAdjustments.value.push({id:Date.now(), date:cashForm.date, amount:cashForm.amount, note:cashForm.note}); showCashModal.value=false; };
 
-            const removeTransaction = (id) => {
-                if(confirm('確定刪除此紀錄？')) {
-                    transactions.value = transactions.value.filter(t => t.id !== id);
-                    markAsChanged();
-                }
-            };
-
-            const addCashAdjustment = () => {
-                if (!cashForm.amount) return;
-                cashAdjustments.value.push({
-                    id: Date.now(),
-                    date: cashForm.date,
-                    amount: parseFloat(cashForm.amount),
-                    note: cashForm.note || '資金調整'
-                });
-                showCashModal.value = false;
-                cashForm.amount = ''; cashForm.note = '';
-                markAsChanged();
-            };
-
-            const removeAdjustment = (id) => {
-                if(confirm('確定刪除此資金紀錄？')) {
-                    cashAdjustments.value = cashAdjustments.value.filter(a => a.id !== id);
-                    markAsChanged();
-                }
-            };
-
-            const formatCurrency = (val, decimals = 2) => {
-                if (val === undefined || val === null) return '0.00';
-                return val.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
-            };
+            const formatCurrency = (val, d=0) => (val||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
 
             return {
-                form, cashForm, showCashModal, dashboard, sortedTransactions, sortedAdjustments,
-                addTransaction, removeTransaction, addCashAdjustment, removeAdjustment,
-                formatCurrency, fetchData, saveData, isLoading, loadingMsg, unsavedChanges,
-                // New exports
-                showNewsModal, selectedSymbol, newsList, newsLoading, openNewsModal, isTaiwanStock
+                API_URL, dashboard, form, cashForm, showCashModal, password, isLoading,
+                transactions, cashAdjustments, sortedTransactions, sortedAdjustments,
+                fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, formatCurrency, resetPassword,
+                showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal
             };
         }
     }).mount('#app');
