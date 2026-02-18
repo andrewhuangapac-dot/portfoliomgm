@@ -9,14 +9,15 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #334155; }
-        .text-up { color: #16a34a; }   
-        .text-down { color: #dc2626; } 
-        .loader { border: 3px solid #e2e8f0; border-radius: 50%; border-top: 3px solid #2563eb; width: 24px; height: 24px; animation: spin 1s linear infinite; }
+        .text-up { color: #16a34a; } .text-down { color: #dc2626; } 
+        .loader { border: 3px solid #e2e8f0; border-top: 3px solid #2563eb; width: 24px; height: 24px; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .ai-glow { box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
         .board-enter-active, .board-leave-active { transition: all 0.5s ease; }
         .board-enter-from, .board-leave-to { opacity: 0; transform: translateY(20px); }
+        .markdown-sm p { margin-bottom: 4px; }
+        .markdown-sm ul { list-style-type: disc; padding-left: 14px; margin-bottom: 4px; }
     </style>
 </head>
 <body>
@@ -27,9 +28,7 @@
         <div>
             <h1 class="text-2xl font-extrabold text-slate-900 flex items-center gap-2 tracking-tight">
                 美股投資組合
-                <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded-md font-bold tracking-wide flex items-center gap-1 shadow-sm">
-                    Gemini 2.5 Pro
-                </span>
+                <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded-md font-bold tracking-wide flex items-center gap-1 shadow-sm">Gemini 2.5 Pro</span>
             </h1>
             <p class="text-slate-500 text-sm font-medium">持倉管理 • 潛在目標 • 投資建議看板</p>
         </div>
@@ -44,27 +43,10 @@
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">可用現金</h3>
-            <div class="flex justify-between items-end mt-2">
-                <p class="text-2xl font-bold text-slate-800">${{ formatCurrency(dashboard.cash) }}</p>
-                <button @click="showCashModal = true" class="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition font-medium">管理</button>
-            </div>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">持倉總成本</h3>
-            <p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.investedAmount) }}</p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">已實現損益</h3>
-            <p class="text-2xl font-bold mt-2" :class="dashboard.totalRealizedPnL >= 0 ? 'text-up' : 'text-down'">
-                {{ dashboard.totalRealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalRealizedPnL) }}
-            </p>
-        </div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">淨資產</h3>
-            <p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.cash + dashboard.investedAmount) }}</p>
-        </div>
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">可用現金</h3><p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.cash) }}</p></div>
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">持倉總成本</h3><p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.investedAmount) }}</p></div>
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">已實現損益</h3><p class="text-2xl font-bold mt-2" :class="dashboard.totalRealizedPnL >= 0 ? 'text-up' : 'text-down'">{{ dashboard.totalRealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalRealizedPnL) }}</p></div>
+        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">淨資產</h3><p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.cash + dashboard.investedAmount) }}</p></div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -74,8 +56,8 @@
                 <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
                     <div class="col-span-2 md:col-span-1"><input type="date" v-model="form.date" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none"></div>
                     <div class="col-span-2 md:col-span-1"><select v-model="form.type" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-medium"><option value="buy">買入</option><option value="sell">賣出</option></select></div>
-                    <div class="col-span-2 md:col-span-1"><input type="text" v-model="form.symbol" placeholder="代號 (如 NVDA)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm uppercase font-bold"></div>
-                    <div class="col-span-1"><input type="number" step="0.01" v-model.number="form.price" placeholder="價格" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"></div>
+                    <div class="col-span-2 md:col-span-1"><input type="text" v-model="form.symbol" placeholder="代號" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm uppercase font-bold"></div>
+                    <div class="col-span-1"><input type="number" v-model.number="form.price" placeholder="價格" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"></div>
                     <div class="col-span-1"><input type="number" v-model.number="form.shares" placeholder="股數" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"></div>
                     <div class="col-span-2 md:col-span-1"><button @click="addTransaction" class="w-full bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold transition">新增</button></div>
                 </div>
@@ -96,53 +78,18 @@
                                 <td class="p-3 text-right font-bold text-blue-700">${{ formatCurrency(holding.totalCost, 0) }}</td>
                                 <td class="p-3 text-center"><button @click="openAIModal(symbol)" class="bg-white border border-blue-200 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-50">解讀</button></td>
                             </tr>
-                            <tr v-if="Object.keys(dashboard.holdings).length === 0"><td colspan="5" class="p-8 text-center text-slate-400 italic">無持倉</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden border-t-4 border-t-orange-400">
-                <div class="p-4 border-b border-slate-100 bg-orange-50 flex justify-between items-center">
-                    <h2 class="font-bold text-orange-800 text-sm uppercase flex items-center gap-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-                        潛在關注目標 (Watchlist)
-                    </h2>
-                </div>
+                <div class="p-4 border-b border-slate-100 bg-orange-50 flex justify-between items-center"><h2 class="font-bold text-orange-800 text-sm uppercase">潛在關注目標 (Watchlist)</h2></div>
                 <div class="p-4 bg-white border-b border-slate-100 flex gap-2">
                     <input type="text" v-model="newWatchSymbol" placeholder="輸入代號 (例如 TSLA)" class="flex-1 border border-slate-300 rounded-lg p-2 text-sm uppercase font-bold focus:ring-2 focus:ring-orange-400 outline-none">
                     <button @click="addWatchlist" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition shadow-sm">加入</button>
                 </div>
-                <table class="w-full text-sm text-left">
-                    <tbody class="divide-y divide-slate-100">
-                        <tr v-for="item in sortedWatchlist" :key="item.id" class="hover:bg-orange-50/50">
-                            <td class="p-3 font-bold text-slate-800 w-1/4">{{ item.symbol }}</td>
-                            <td class="p-3 text-slate-400 text-xs w-1/4">Added: {{ item.addedDate }}</td>
-                            <td class="p-3 text-center"><button @click="openAIModal(item.symbol)" class="bg-white border border-orange-200 text-orange-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-orange-50">AI 分析</button></td>
-                            <td class="p-3 text-right"><button @click="removeWatchlist(item.id)" class="text-slate-300 hover:text-red-500 font-bold px-2 py-1">移除</button></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 bg-slate-50"><h2 class="font-bold text-slate-700 text-sm uppercase">交易紀錄</h2></div>
-                <div class="overflow-x-auto max-h-64 overflow-y-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs sticky top-0"><tr><th class="p-3">日期</th><th class="p-3">代號</th><th class="p-3">操作</th><th class="p-3 text-right">價格</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">損益</th><th class="p-3"></th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr v-for="t in sortedTransactions" :key="t.id">
-                                <td class="p-3 text-slate-500 text-xs">{{ t.date }}</td>
-                                <td class="p-3 font-bold text-slate-700">{{ t.symbol }}</td>
-                                <td class="p-3"><span :class="t.type==='buy'?'bg-blue-50 text-blue-700':'bg-amber-50 text-amber-700'" class="px-2 py-0.5 rounded text-xs border uppercase">{{ t.type }}</span></td>
-                                <td class="p-3 text-right">${{ formatCurrency(t.price) }}</td>
-                                <td class="p-3 text-right">{{ t.shares }}</td>
-                                <td class="p-3 text-right font-bold"><span v-if="t.type==='sell'" :class="t.realizedPnL>=0?'text-up':'text-down'">{{ t.realizedPnL>=0?'+':'' }}${{ formatCurrency(t.realizedPnL, 0) }}</span><span v-else class="text-slate-300">-</span></td>
-                                <td class="p-3 text-center"><button @click="removeTransaction(t.id)" class="text-slate-300 hover:text-red-500 font-bold">×</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                <table class="w-full text-sm text-left"><tbody class="divide-y divide-slate-100"><tr v-for="item in sortedWatchlist" :key="item.id" class="hover:bg-orange-50/50"><td class="p-3 font-bold text-slate-800 w-1/4">{{ item.symbol }}</td><td class="p-3 text-slate-400 text-xs w-1/4">Added: {{ item.addedDate }}</td><td class="p-3 text-center"><button @click="openAIModal(item.symbol)" class="bg-white border border-orange-200 text-orange-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-orange-50">AI 分析</button></td><td class="p-3 text-right"><button @click="removeWatchlist(item.id)" class="text-slate-300 hover:text-red-500 font-bold px-2 py-1">移除</button></td></tr></tbody></table>
             </div>
         </div>
 
@@ -159,38 +106,57 @@
 
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
         <transition name="board">
-            <div v-if="showBoard" class="bg-white p-0 rounded-xl shadow-2xl border border-slate-200 w-80 overflow-hidden">
-                <div class="bg-slate-900 text-white p-3 flex justify-between items-center">
+            <div v-if="showBoard" class="bg-white p-0 rounded-xl shadow-2xl border border-slate-200 w-96 overflow-hidden flex flex-col max-h-[600px]">
+                <div class="bg-slate-900 text-white p-3 flex justify-between items-center flex-shrink-0">
                     <h3 class="font-bold text-sm flex items-center gap-2">📢 AI 投資建議公告</h3>
                     <button @click="showBoard = false" class="text-slate-400 hover:text-white">&times;</button>
                 </div>
-                <div class="max-h-64 overflow-y-auto">
-                    <div v-for="rec in sortedRecommendations.slice(0, 5)" :key="rec.id" class="p-3 border-b border-slate-100 hover:bg-slate-50 text-sm">
+                
+                <div class="overflow-y-auto flex-1">
+                    <div v-for="rec in sortedRecommendations.slice(0, 8)" :key="rec.id" class="p-3 border-b border-slate-100 hover:bg-slate-50 text-sm">
                         <div class="flex justify-between items-center mb-1">
-                            <span class="font-bold text-slate-800">{{ rec.symbol }}</span>
+                            <span class="font-bold text-slate-800 text-base">{{ rec.symbol }}</span>
                             <span class="text-xs text-slate-400">{{ rec.date }}</span>
                         </div>
                         <div class="flex justify-between items-center">
-                            <span :class="rec.type === 'Buy' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded text-xs font-bold">{{ rec.type === 'Buy' ? '買入' : '賣出' }}</span>
-                            <span class="text-slate-600 font-medium">@ ${{ formatCurrency(rec.price) }}</span>
+                            <div class="flex gap-2">
+                                <span :class="rec.type === 'Buy' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded text-xs font-bold">{{ rec.type === 'Buy' ? '買入' : '賣出' }}</span>
+                                <span class="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100">AI數: {{ rec.count }}</span>
+                            </div>
+                            <span class="text-slate-600 font-bold">@ ${{ formatCurrency(rec.price) }}</span>
                         </div>
-                        <div class="mt-1 text-xs text-slate-400 text-right">AI 參考次數: <span class="text-orange-600 font-bold">{{ rec.count }}</span></div>
+                        <div v-if="rec.analysis" class="mt-2">
+                            <button @click="rec.showDetails = !rec.showDetails" class="text-xs text-blue-500 hover:text-blue-700 underline flex items-center gap-1">
+                                {{ rec.showDetails ? '收起解讀' : '查看 AI 觀點' }}
+                                <span v-if="!rec.showDetails">▼</span><span v-else>▲</span>
+                            </button>
+                            <div v-if="rec.showDetails" class="mt-2 p-2 bg-slate-100 rounded text-xs text-slate-600 leading-relaxed markdown-sm" v-html="marked.parse(rec.analysis)"></div>
+                        </div>
                     </div>
                     <div v-if="recommendations.length === 0" class="p-4 text-center text-slate-400 text-xs">尚無建議</div>
                 </div>
-                <div class="p-3 bg-slate-50 border-t border-slate-100">
+
+                <div class="p-3 bg-slate-50 border-t border-slate-100 flex-shrink-0">
                     <button @click="showRecForm = !showRecForm" class="w-full bg-blue-600 text-white py-1.5 rounded text-xs font-bold hover:bg-blue-700">{{ showRecForm ? '取消' : '+ 發布新建議' }}</button>
+                    
                     <div v-if="showRecForm" class="mt-3 space-y-2">
-                        <input v-model="recForm.symbol" placeholder="代號 (如 NVDA)" class="w-full border p-1.5 rounded text-xs uppercase font-bold">
                         <div class="flex gap-2">
-                            <select v-model="recForm.type" class="flex-1 border p-1.5 rounded text-xs"><option value="Buy">買入</option><option value="Sell">賣出</option></select>
-                            <input v-model.number="recForm.price" type="number" placeholder="價格" class="flex-1 border p-1.5 rounded text-xs">
+                            <input v-model="recForm.symbol" placeholder="代號" class="w-1/3 border p-1.5 rounded text-xs uppercase font-bold">
+                            <input v-model.number="recForm.price" type="number" placeholder="價格" class="w-1/3 border p-1.5 rounded text-xs">
+                            <input v-model.number="recForm.count" type="number" placeholder="AI數" class="w-1/3 border p-1.5 rounded text-xs">
                         </div>
-                        <div class="flex gap-2 items-center">
-                            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">AI 數:</span>
-                            <input v-model.number="recForm.count" type="number" placeholder="次數" class="flex-1 border p-1.5 rounded text-xs">
+                        <select v-model="recForm.type" class="w-full border p-1.5 rounded text-xs"><option value="Buy">買入</option><option value="Sell">賣出</option></select>
+                        
+                        <div class="flex justify-between items-end">
+                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">觀點摘要 / 解讀</span>
+                            <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="text-[10px] bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded font-bold hover:bg-purple-200 flex items-center gap-1">
+                                <span v-if="isGeneratingAnalysis" class="loader !w-3 !h-3 !border-2 !border-purple-300 !border-t-purple-600"></span>
+                                {{ isGeneratingAnalysis ? '生成中...' : '✨ AI 自動生成' }}
+                            </button>
                         </div>
                         
+                        <textarea v-model="recForm.analysis" placeholder="輸入內容或點擊上方按鈕生成當下 AI 分析..." rows="3" class="w-full border p-1.5 rounded text-xs focus:ring-1 focus:ring-blue-500"></textarea>
+
                         <button @click="addRecommendation" class="w-full bg-slate-800 text-white py-1.5 rounded text-xs hover:bg-slate-900 mt-1">確認發布</button>
                     </div>
                 </div>
@@ -209,12 +175,6 @@
                 <div v-if="aiLoading" class="flex flex-col items-center justify-center py-12 space-y-6"><div class="w-16 h-16 bg-white rounded-full flex items-center justify-center ai-glow border border-blue-100"><div class="loader"></div></div><p class="text-slate-800 font-bold">AI 正在思考...</p></div>
                 <div v-else>
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-blue-100 mb-6"><div class="prose prose-sm max-w-none text-slate-700" v-html="aiContentParsed"></div></div>
-                    <div class="grid grid-cols-4 gap-3">
-                        <a :href="`https://finviz.com/quote.ashx?t=${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-slate-800 text-white rounded-lg text-xs font-bold">Finviz</a>
-                        <a :href="`https://seekingalpha.com/symbol/${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-orange-600 text-white rounded-lg text-xs font-bold">Seeking Alpha</a>
-                        <a :href="`https://finance.yahoo.com/quote/${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-purple-600 text-white rounded-lg text-xs font-bold">Yahoo</a>
-                        <a :href="`https://www.google.com/search?q=${selectedSymbol}+stock+news`" target="_blank" class="flex items-center justify-center py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold">Google</a>
-                    </div>
                 </div>
             </div>
         </div>
@@ -237,7 +197,7 @@
     // ==========================================
     // 🔴 這裡必須填入您的 Apps Script 網址 (結尾是 /exec)
     // ==========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbx1o7gEqqCYlESqQoFHfrYcSxcEaTR4mJAZWUe2MHZ5tLuvAAYy94SheQQP5L8AkIUV/exec'; 
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwUOULhodFmblMV0FYQptc1ZUCGVs2l5QlxB-PtPiwRS3LiL357CJ3b8ERqpubZjQv3/exec'; 
     // ==========================================
 
     createApp({
@@ -255,10 +215,11 @@
             const aiContent = ref('');
             const showBoard = ref(true); 
             const showRecForm = ref(false);
+            const isGeneratingAnalysis = ref(false); // 生成分析的 Loading 狀態
             
             const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
             const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
-            const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1 });
+            const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '' });
             const newWatchSymbol = ref('');
 
             onMounted(() => { if (password.value) fetchData(); });
@@ -284,7 +245,7 @@
                     transactions.value = data.transactions || [];
                     cashAdjustments.value = data.cashAdjustments || [];
                     watchlist.value = data.watchlist || [];
-                    recommendations.value = data.recommendations || [];
+                    recommendations.value = (data.recommendations || []).map(r => ({...r, showDetails: false}));
                 } catch (e) {
                     if(e.message.includes('Wrong Password')) resetPassword();
                     alert(e.message);
@@ -295,12 +256,13 @@
                 if (!checkPassword()) return;
                 if(!confirm('儲存變更？')) return;
                 try {
+                    const cleanRecs = recommendations.value.map(({showDetails, ...rest}) => rest);
                     await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, {
                         method: 'POST', body: JSON.stringify({ 
                             transactions: transactions.value, 
                             cashAdjustments: cashAdjustments.value,
                             watchlist: watchlist.value,
-                            recommendations: recommendations.value
+                            recommendations: cleanRecs
                         })
                     });
                     alert('儲存成功！');
@@ -330,8 +292,33 @@
             };
             const removeWatchlist = (id) => { if(confirm('確定移除？')) watchlist.value = watchlist.value.filter(w => w.id !== id); };
 
+            // 🔴 新增：自動生成分析
+            const generateAnalysis = async () => {
+                if (!recForm.symbol) return alert('請先輸入代號 (例如 NVDA)');
+                if (!checkPassword()) return;
+                
+                isGeneratingAnalysis.value = true;
+                const symbol = recForm.symbol.toUpperCase();
+                
+                try {
+                    const res = await fetch(`${API_URL}?action=analyze&symbol=${symbol}&password=${encodeURIComponent(password.value)}`);
+                    const data = await res.json();
+                    
+                    if (data.status === 'success') {
+                        // 填入分析結果到 textarea
+                        recForm.analysis = data.analysis;
+                    } else {
+                        alert(`分析失敗: ${data.message}`);
+                    }
+                } catch (e) {
+                    alert(`連線錯誤: ${e.message}`);
+                } finally {
+                    isGeneratingAnalysis.value = false;
+                }
+            };
+
             const addRecommendation = () => {
-                if (!recForm.symbol || !recForm.price || !recForm.count) return alert('請填寫完整 (代號/價格/次數)');
+                if (!recForm.symbol || !recForm.price || !recForm.count) return alert('請填寫完整');
                 const sym = recForm.symbol.toUpperCase();
                 
                 recommendations.value.push({ 
@@ -340,10 +327,12 @@
                     type: recForm.type, 
                     symbol: sym, 
                     price: recForm.price, 
-                    count: recForm.count // 手動輸入的次數
+                    count: recForm.count,
+                    analysis: recForm.analysis, // 儲存生成的文字
+                    showDetails: false
                 });
 
-                recForm.symbol = ''; recForm.price = ''; recForm.count = 1; showRecForm = false;
+                recForm.symbol = ''; recForm.price = ''; recForm.count = 1; recForm.analysis = ''; showRecForm = false;
             };
 
             const dashboard = computed(() => {
@@ -377,7 +366,7 @@
             const addCashAdjustment = () => { cashAdjustments.value.push({id:Date.now(), date:cashForm.date, amount:cashForm.amount, note:cashForm.note}); showCashModal.value=false; };
             const formatCurrency = (val, d=0) => (val||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
             
-            return { API_URL, dashboard, form, cashForm, showCashModal, password, isLoading, transactions, cashAdjustments, watchlist, recommendations, sortedTransactions, sortedWatchlist, sortedRecommendations, fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, addWatchlist, removeWatchlist, addRecommendation, formatCurrency, resetPassword, showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal, newWatchSymbol, showBoard, showRecForm, recForm };
+            return { API_URL, dashboard, form, cashForm, showCashModal, password, isLoading, transactions, cashAdjustments, watchlist, recommendations, sortedTransactions, sortedWatchlist, sortedRecommendations, fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, addWatchlist, removeWatchlist, addRecommendation, formatCurrency, resetPassword, showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal, newWatchSymbol, showBoard, showRecForm, recForm, marked, generateAnalysis, isGeneratingAnalysis };
         }
     }).mount('#app');
 </script>
