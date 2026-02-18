@@ -15,7 +15,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .ai-glow { box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
-        /* 公告欄動畫 */
         .board-enter-active, .board-leave-active { transition: all 0.5s ease; }
         .board-enter-from, .board-leave-to { opacity: 0; transform: translateY(20px); }
     </style>
@@ -167,21 +166,32 @@
                 </div>
                 <div class="max-h-64 overflow-y-auto">
                     <div v-for="rec in sortedRecommendations.slice(0, 5)" :key="rec.id" class="p-3 border-b border-slate-100 hover:bg-slate-50 text-sm">
-                        <div class="flex justify-between items-center mb-1"><span class="font-bold text-slate-800">{{ rec.symbol }}</span><span class="text-xs text-slate-400">{{ rec.date }}</span></div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-slate-800">{{ rec.symbol }}</span>
+                            <span class="text-xs text-slate-400">{{ rec.date }}</span>
+                        </div>
                         <div class="flex justify-between items-center">
                             <span :class="rec.type === 'Buy' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded text-xs font-bold">{{ rec.type === 'Buy' ? '買入' : '賣出' }}</span>
                             <span class="text-slate-600 font-medium">@ ${{ formatCurrency(rec.price) }}</span>
                         </div>
-                        <div class="mt-1 text-xs text-slate-400 text-right">推薦次數: <span class="text-blue-600 font-bold">{{ rec.count }}</span></div>
+                        <div class="mt-1 text-xs text-slate-400 text-right">AI 參考次數: <span class="text-orange-600 font-bold">{{ rec.count }}</span></div>
                     </div>
                     <div v-if="recommendations.length === 0" class="p-4 text-center text-slate-400 text-xs">尚無建議</div>
                 </div>
                 <div class="p-3 bg-slate-50 border-t border-slate-100">
                     <button @click="showRecForm = !showRecForm" class="w-full bg-blue-600 text-white py-1.5 rounded text-xs font-bold hover:bg-blue-700">{{ showRecForm ? '取消' : '+ 發布新建議' }}</button>
                     <div v-if="showRecForm" class="mt-3 space-y-2">
-                        <input v-model="recForm.symbol" placeholder="代號" class="w-full border p-1.5 rounded text-xs uppercase font-bold">
-                        <div class="flex gap-2"><select v-model="recForm.type" class="flex-1 border p-1.5 rounded text-xs"><option value="Buy">買入</option><option value="Sell">賣出</option></select><input v-model.number="recForm.price" type="number" placeholder="價格" class="flex-1 border p-1.5 rounded text-xs"></div>
-                        <button @click="addRecommendation" class="w-full bg-slate-800 text-white py-1.5 rounded text-xs hover:bg-slate-900">確認發布</button>
+                        <input v-model="recForm.symbol" placeholder="代號 (如 NVDA)" class="w-full border p-1.5 rounded text-xs uppercase font-bold">
+                        <div class="flex gap-2">
+                            <select v-model="recForm.type" class="flex-1 border p-1.5 rounded text-xs"><option value="Buy">買入</option><option value="Sell">賣出</option></select>
+                            <input v-model.number="recForm.price" type="number" placeholder="價格" class="flex-1 border p-1.5 rounded text-xs">
+                        </div>
+                        <div class="flex gap-2 items-center">
+                            <span class="text-xs text-slate-500 font-bold whitespace-nowrap">AI 數:</span>
+                            <input v-model.number="recForm.count" type="number" placeholder="次數" class="flex-1 border p-1.5 rounded text-xs">
+                        </div>
+                        
+                        <button @click="addRecommendation" class="w-full bg-slate-800 text-white py-1.5 rounded text-xs hover:bg-slate-900 mt-1">確認發布</button>
                     </div>
                 </div>
             </div>
@@ -248,7 +258,7 @@
             
             const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
             const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
-            const recForm = reactive({ symbol: '', type: 'Buy', price: '' });
+            const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1 });
             const newWatchSymbol = ref('');
 
             onMounted(() => { if (password.value) fetchData(); });
@@ -321,11 +331,19 @@
             const removeWatchlist = (id) => { if(confirm('確定移除？')) watchlist.value = watchlist.value.filter(w => w.id !== id); };
 
             const addRecommendation = () => {
-                if (!recForm.symbol || !recForm.price) return alert('請填寫完整');
+                if (!recForm.symbol || !recForm.price || !recForm.count) return alert('請填寫完整 (代號/價格/次數)');
                 const sym = recForm.symbol.toUpperCase();
-                const count = recommendations.value.filter(r => r.symbol === sym).length + 1;
-                recommendations.value.push({ id: Date.now(), date: new Date().toISOString().split('T')[0], type: recForm.type, symbol: sym, price: recForm.price, count: count });
-                recForm.symbol = ''; recForm.price = ''; showRecForm = false;
+                
+                recommendations.value.push({ 
+                    id: Date.now(), 
+                    date: new Date().toISOString().split('T')[0], 
+                    type: recForm.type, 
+                    symbol: sym, 
+                    price: recForm.price, 
+                    count: recForm.count // 手動輸入的次數
+                });
+
+                recForm.symbol = ''; recForm.price = ''; recForm.count = 1; showRecForm = false;
             };
 
             const dashboard = computed(() => {
