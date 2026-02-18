@@ -3,24 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>美股投資組合管理 (Gemini 1.5 Pro)</title>
+    <title>美股投資組合 & 觀察清單 (AI Pro)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <style>
         body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #334155; }
-        .text-up { color: #16a34a; }   /* 綠色代表獲利 (美股慣例) */
-        .text-down { color: #dc2626; } /* 紅色代表虧損 */
+        .text-up { color: #16a34a; }   
+        .text-down { color: #dc2626; } 
         .loader { border: 3px solid #e2e8f0; border-radius: 50%; border-top: 3px solid #2563eb; width: 24px; height: 24px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        
-        /* Markdown 樣式優化 */
         .prose h1, .prose h2, .prose h3 { font-weight: 700; color: #1e293b; margin-top: 1em; margin-bottom: 0.5em; }
         .prose ul { list-style-type: disc; padding-left: 1.2em; margin-bottom: 1em; }
-        .prose li { margin-bottom: 0.3em; }
-        .prose p { margin-bottom: 0.8em; line-height: 1.6; }
-        .prose strong { color: #0f172a; font-weight: 700; }
-
         .ai-glow { box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); animation: pulse 2s infinite; }
         @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
     </style>
@@ -37,7 +31,7 @@
                     Gemini 1.5 Pro
                 </span>
             </h1>
-            <p class="text-slate-500 text-sm font-medium">華爾街新聞 • Reddit 論壇風向 • AI 智能分析</p>
+            <p class="text-slate-500 text-sm font-medium">持倉管理 • 潛在目標分析 • AI 智能助手</p>
         </div>
         <div class="flex gap-2">
             <button @click="resetPassword" class="px-3 py-2 text-xs text-slate-400 hover:text-slate-600 underline font-medium">重設密碼</button>
@@ -51,24 +45,24 @@
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
         <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">可用現金 (Buying Power)</h3>
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">可用現金</h3>
             <div class="flex justify-between items-end mt-2">
                 <p class="text-2xl font-bold text-slate-800">${{ formatCurrency(dashboard.cash) }}</p>
-                <button @click="showCashModal = true" class="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition font-medium">資金管理</button>
+                <button @click="showCashModal = true" class="text-xs text-blue-600 hover:bg-blue-50 px-2 py-1 rounded transition font-medium">管理</button>
             </div>
         </div>
         <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">持倉總成本 (Cost Basis)</h3>
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">總投入成本</h3>
             <p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.investedAmount) }}</p>
         </div>
         <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">已實現損益 (Realized P&L)</h3>
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">已實現損益</h3>
             <p class="text-2xl font-bold mt-2" :class="dashboard.totalRealizedPnL >= 0 ? 'text-up' : 'text-down'">
                 {{ dashboard.totalRealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalRealizedPnL) }}
             </p>
         </div>
         <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">淨資產 (Net Worth)</h3>
+            <h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">淨資產總額</h3>
             <p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.cash + dashboard.investedAmount) }}</p>
         </div>
     </div>
@@ -78,64 +72,90 @@
         <div class="lg:col-span-2 space-y-6">
             
             <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">新增交易</h2>
+                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase tracking-wide">新增交易紀錄</h2>
                 <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
                     <div class="col-span-2 md:col-span-1"><input type="date" v-model="form.date" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none"></div>
-                    <div class="col-span-2 md:col-span-1"><select v-model="form.type" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-medium"><option value="buy">買入 (Buy)</option><option value="sell">賣出 (Sell)</option></select></div>
-                    <div class="col-span-2 md:col-span-1"><input type="text" v-model="form.symbol" placeholder="代號 (如 NVDA)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm uppercase font-bold"></div>
+                    <div class="col-span-2 md:col-span-1"><select v-model="form.type" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-medium"><option value="buy">買入</option><option value="sell">賣出</option></select></div>
+                    <div class="col-span-2 md:col-span-1"><input type="text" v-model="form.symbol" placeholder="代號 (如 AAPL)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm uppercase font-bold"></div>
                     <div class="col-span-1"><input type="number" step="0.01" v-model.number="form.price" placeholder="價格" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"></div>
                     <div class="col-span-1"><input type="number" v-model.number="form.shares" placeholder="股數" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"></div>
-                    <div class="col-span-2 md:col-span-1"><button @click="addTransaction" class="w-full bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold transition">新增記錄</button></div>
+                    <div class="col-span-2 md:col-span-1"><button @click="addTransaction" class="w-full bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold transition">新增</button></div>
                 </div>
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
-                    <h2 class="font-bold text-slate-700 text-sm uppercase">當前持倉 (Positions)</h2>
+                    <h2 class="font-bold text-slate-700 text-sm uppercase">當前持倉 (Holdings)</h2>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
-                            <tr>
-                                <th class="p-3">代號</th>
-                                <th class="p-3 text-right">股數</th>
-                                <th class="p-3 text-right">平均成本</th>
-                                <th class="p-3 text-right text-blue-700">總成本</th> <th class="p-3 text-center">AI 分析</th>
-                            </tr>
+                            <tr><th class="p-3">代號</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">平均成本</th><th class="p-3 text-right text-blue-700">總成本</th><th class="p-3 text-center">AI 分析</th></tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <tr v-for="(holding, symbol) in dashboard.holdings" :key="symbol" v-show="holding.shares > 0" class="hover:bg-slate-50 transition-colors">
                                 <td class="p-3 font-bold text-slate-800">{{ symbol }}</td>
                                 <td class="p-3 text-right font-medium">{{ holding.shares }}</td>
                                 <td class="p-3 text-right text-slate-500">${{ formatCurrency(holding.avgCost, 2) }}</td>
-                                <td class="p-3 text-right font-bold text-blue-700">${{ formatCurrency(holding.totalCost, 0) }}</td> <td class="p-3 text-center">
+                                <td class="p-3 text-right font-bold text-blue-700">${{ formatCurrency(holding.totalCost, 0) }}</td>
+                                <td class="p-3 text-center">
                                     <button @click="openAIModal(symbol)" class="group bg-white border border-blue-200 text-blue-600 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-blue-50 transition flex items-center gap-1 mx-auto">
-                                        <span class="group-hover:scale-110 transition-transform">⚡</span> AI 解讀
+                                        <span class="group-hover:scale-110 transition-transform">⚡</span> 解讀
                                     </button>
                                 </td>
                             </tr>
-                            <tr v-if="Object.keys(dashboard.holdings).length === 0"><td colspan="5" class="p-8 text-center text-slate-400 italic">目前沒有持倉</td></tr>
+                            <tr v-if="Object.keys(dashboard.holdings).length === 0"><td colspan="5" class="p-8 text-center text-slate-400 italic">目前無持倉</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden border-t-4 border-t-orange-400">
+                <div class="p-4 border-b border-slate-100 bg-orange-50 flex justify-between items-center">
+                    <h2 class="font-bold text-orange-800 text-sm uppercase flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                        潛在關注目標 (Watchlist)
+                    </h2>
+                </div>
+                
+                <div class="p-4 bg-white border-b border-slate-100 flex gap-2">
+                    <input type="text" v-model="newWatchSymbol" placeholder="輸入代號 (例如 TSLA)" class="flex-1 border border-slate-300 rounded-lg p-2 text-sm uppercase font-bold focus:ring-2 focus:ring-orange-400 outline-none">
+                    <button @click="addWatchlist" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition shadow-sm">加入觀察</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="item in sortedWatchlist" :key="item.id" class="hover:bg-orange-50/50 transition-colors">
+                                <td class="p-3 font-bold text-slate-800 w-1/4">{{ item.symbol }}</td>
+                                <td class="p-3 text-slate-400 text-xs w-1/4">加入於: {{ item.addedDate }}</td>
+                                <td class="p-3 text-center">
+                                    <button @click="openAIModal(item.symbol)" class="bg-white border border-orange-200 text-orange-600 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-orange-50 transition inline-flex items-center gap-1 shadow-sm">
+                                        <span>🔍</span> AI 潛力分析
+                                    </button>
+                                </td>
+                                <td class="p-3 text-right">
+                                    <button @click="removeWatchlist(item.id)" class="text-slate-300 hover:text-red-500 font-bold px-2 py-1">移除</button>
+                                </td>
+                            </tr>
+                            <tr v-if="watchlist.length === 0"><td colspan="4" class="p-8 text-center text-slate-400 italic">尚未加入觀察名單</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
 
              <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 bg-slate-50"><h2 class="font-bold text-slate-700 text-sm uppercase">交易歷史紀錄</h2></div>
-                <div class="overflow-x-auto max-h-96 overflow-y-auto">
+                <div class="p-4 border-b border-slate-100 bg-slate-50"><h2 class="font-bold text-slate-700 text-sm uppercase">歷史交易紀錄</h2></div>
+                <div class="overflow-x-auto max-h-64 overflow-y-auto">
                     <table class="w-full text-sm text-left">
                         <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-semibold sticky top-0">
-                            <tr><th class="p-3">日期</th><th class="p-3">代號</th><th class="p-3">類別</th><th class="p-3 text-right">價格</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">損益</th><th class="p-3"></th></tr>
+                            <tr><th class="p-3">日期</th><th class="p-3">代號</th><th class="p-3">操作</th><th class="p-3 text-right">價格</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">損益</th><th class="p-3"></th></tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
                             <tr v-for="t in sortedTransactions" :key="t.id" class="hover:bg-slate-50">
                                 <td class="p-3 text-slate-500 text-xs">{{ t.date }}</td>
                                 <td class="p-3 font-bold text-slate-700">{{ t.symbol }}</td>
-                                <td class="p-3">
-                                    <span :class="t.type==='buy'?'bg-blue-50 text-blue-700 border-blue-100':'bg-amber-50 text-amber-700 border-amber-100'" class="px-2 py-0.5 rounded text-xs border font-bold uppercase">
-                                        {{ t.type === 'buy' ? '買入' : '賣出' }}
-                                    </span>
-                                </td>
+                                <td class="p-3"><span :class="t.type==='buy'?'bg-blue-50 text-blue-700 border-blue-100':'bg-amber-50 text-amber-700 border-amber-100'" class="px-2 py-0.5 rounded text-xs border font-bold uppercase">{{ t.type==='buy'?'買入':'賣出' }}</span></td>
                                 <td class="p-3 text-right font-medium">${{ formatCurrency(t.price) }}</td>
                                 <td class="p-3 text-right font-medium">{{ t.shares }}</td>
                                 <td class="p-3 text-right font-bold"><span v-if="t.type==='sell'" :class="t.realizedPnL>=0?'text-up':'text-down'">{{ t.realizedPnL>=0?'+':'' }}${{ formatCurrency(t.realizedPnL, 0) }}</span><span v-else class="text-slate-300">-</span></td>
@@ -149,18 +169,15 @@
 
         <div class="space-y-6">
             <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
-                <h2 class="font-bold text-slate-700 border-b border-slate-100 pb-2 mb-2 text-sm uppercase">月度損益統計</h2>
+                <h2 class="font-bold text-slate-700 border-b border-slate-100 pb-2 mb-2 text-sm uppercase">月度損益</h2>
                 <div v-for="(stat, month) in dashboard.monthlyStats" :key="month" class="flex justify-between py-2 border-b border-slate-50 last:border-0 text-sm">
                     <span class="text-slate-600 font-medium">{{ month }}</span>
                     <span :class="stat.pnl >= 0 ? 'text-up' : 'text-down'" class="font-bold">{{ stat.pnl >= 0 ? '+' : '' }}${{ formatCurrency(stat.pnl, 0) }}</span>
                 </div>
-                <div v-if="Object.keys(dashboard.monthlyStats).length === 0" class="text-center text-slate-400 py-4 text-xs italic">尚無已實現損益</div>
             </div>
             
             <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-2 mb-2">
-                    <h2 class="font-bold text-slate-700 text-sm uppercase">資金進出紀錄</h2>
-                </div>
+                <h2 class="font-bold text-slate-700 border-b border-slate-100 pb-2 mb-2 text-sm uppercase">資金紀錄</h2>
                 <div class="max-h-64 overflow-y-auto space-y-2">
                     <div v-for="adj in sortedAdjustments" :key="adj.id" class="flex justify-between text-sm py-1 border-b border-slate-50 last:border-0">
                         <div class="flex flex-col">
@@ -177,38 +194,27 @@
     <div v-if="showAIModal" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden relative border border-slate-200">
             <div class="p-5 bg-gradient-to-r from-slate-800 to-slate-900 text-white flex justify-between items-center">
-                <h3 class="text-lg font-bold flex items-center gap-2">
-                    <span class="text-blue-400">🤖</span> AI 智能分析 - {{ selectedSymbol }}
-                </h3>
-                <button @click="showAIModal = false" class="text-slate-400 hover:text-white text-2xl transition">&times;</button>
+                <h3 class="text-lg font-bold flex items-center gap-2"><span class="text-blue-400">🤖</span> AI 智能分析 - {{ selectedSymbol }}</h3>
+                <button @click="showAIModal = false" class="text-slate-400 hover:text-white text-2xl">&times;</button>
             </div>
-
             <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
-                
                 <div v-if="aiLoading" class="flex flex-col items-center justify-center py-12 space-y-6">
-                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center ai-glow border border-blue-100">
-                        <div class="loader"></div>
-                    </div>
-                    <div class="text-center">
-                        <p class="text-slate-800 font-bold text-lg">AI 正在思考分析中...</p>
-                        <p class="text-slate-500 text-sm mt-1">搜尋華爾街新聞 • 爬取 Reddit 情緒 • 綜合判斷</p>
-                    </div>
+                    <div class="w-16 h-16 bg-white rounded-full flex items-center justify-center ai-glow border border-blue-100"><div class="loader"></div></div>
+                    <div class="text-center"><p class="text-slate-800 font-bold text-lg">AI 正在深度分析...</p><p class="text-slate-500 text-sm mt-1">搜尋全網資訊、Reddit 熱度與機構觀點</p></div>
                 </div>
-
                 <div v-else>
                     <div class="bg-white p-6 rounded-xl shadow-sm border border-blue-100 mb-6 relative overflow-hidden">
                         <div class="flex items-center gap-2 mb-4">
-                            <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold border border-blue-200">GEMINI 2.5 PRO</span>
+                            <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-bold border border-blue-200">GEMINI 1.5 PRO</span>
                             <span class="text-slate-400 text-xs font-medium">剛剛更新</span>
                         </div>
                         <div class="prose prose-sm max-w-none text-slate-700" v-html="aiContentParsed"></div>
                     </div>
-
-                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <a :href="`https://finviz.com/quote.ashx?t=${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900 transition">Finviz 圖表</a>
-                        <a :href="`https://seekingalpha.com/symbol/${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700 transition">Seeking Alpha</a>
-                        <a :href="`https://finance.yahoo.com/quote/${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700 transition">Yahoo 財經</a>
-                        <a :href="`https://www.google.com/search?q=${selectedSymbol}+stock+news`" target="_blank" class="flex items-center justify-center py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold hover:bg-blue-100 transition">Google 新聞</a>
+                    <div class="grid grid-cols-4 gap-3">
+                        <a :href="`https://finviz.com/quote.ashx?t=${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-slate-800 text-white rounded-lg text-xs font-bold hover:bg-slate-900">Finviz</a>
+                        <a :href="`https://seekingalpha.com/symbol/${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-orange-600 text-white rounded-lg text-xs font-bold hover:bg-orange-700">Seeking Alpha</a>
+                        <a :href="`https://finance.yahoo.com/quote/${selectedSymbol}`" target="_blank" class="flex items-center justify-center py-2.5 bg-purple-600 text-white rounded-lg text-xs font-bold hover:bg-purple-700">Yahoo</a>
+                        <a :href="`https://www.google.com/search?q=${selectedSymbol}+stock+news`" target="_blank" class="flex items-center justify-center py-2.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-bold hover:bg-blue-100">Google</a>
                     </div>
                 </div>
             </div>
@@ -217,14 +223,13 @@
     
     <div v-if="showCashModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-lg w-80 shadow-xl border border-slate-100">
-            <h3 class="font-bold mb-4 text-slate-800 uppercase text-sm">調整資金 (入金/出金)</h3>
+            <h3 class="font-bold mb-4 text-slate-800 uppercase text-sm">調整資金</h3>
             <input type="date" v-model="cashForm.date" class="w-full border rounded-lg p-2.5 mb-3 text-sm">
-            <input type="number" v-model.number="cashForm.amount" class="w-full border rounded-lg p-2.5 mb-3 text-sm" placeholder="金額 (負數代表出金)">
-            <input type="text" v-model="cashForm.note" class="w-full border rounded-lg p-2.5 mb-5 text-sm" placeholder="備註 (例如: 入金)">
-            <div class="flex gap-2"><button @click="addCashAdjustment" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-blue-700">確認</button><button @click="showCashModal = false" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-lg text-sm font-bold hover:bg-slate-200">取消</button></div>
+            <input type="number" v-model.number="cashForm.amount" class="w-full border rounded-lg p-2.5 mb-3 text-sm" placeholder="金額 (負數=出金)">
+            <input type="text" v-model="cashForm.note" class="w-full border rounded-lg p-2.5 mb-5 text-sm" placeholder="備註">
+            <div class="flex gap-2"><button @click="addCashAdjustment" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold">確認</button><button @click="showCashModal = false" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-lg text-sm font-bold">取消</button></div>
         </div>
     </div>
-
 </div>
 
 <script>
@@ -233,13 +238,14 @@
     // ==========================================
     // 🔴 這裡必須填入您的 Apps Script 網址 (結尾是 /exec)
     // ==========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbzZTiDJx46nbdrssqXf0Bh4MWx9bKa8kp6K187_O7krFXhclm7YlTOL0gj91SFGqGZj/exec'; 
+    const API_URL = 'https://script.google.com/macros/s/AKfycbzB1_NS_p0ahqFkUPShq8IMa-WPBlPPXfi2h3IqI3biAjwSsgo9ZTqewlZFXUh4jSXf/exec'; 
     // ==========================================
 
     createApp({
         setup() {
             const transactions = ref([]);
             const cashAdjustments = ref([]);
+            const watchlist = ref([]); // 新增觀察清單資料
             const showCashModal = ref(false);
             const isLoading = ref(false);
             const password = ref(localStorage.getItem('portfolio_password') || '');
@@ -247,36 +253,27 @@
             const aiLoading = ref(false);
             const selectedSymbol = ref('');
             const aiContent = ref('');
+            
             const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
             const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
+            const newWatchSymbol = ref(''); // 新增關注股輸入框
 
             onMounted(() => { if (password.value) fetchData(); });
 
             const checkPassword = () => {
                 if (!password.value) {
                     const input = prompt('請輸入存取密碼：');
-                    if (input) {
-                        password.value = input;
-                        localStorage.setItem('portfolio_password', input);
-                    } else {
-                        alert('需要密碼才能存取。');
-                        return false;
-                    }
+                    if (input) { password.value = input; localStorage.setItem('portfolio_password', input); } 
+                    else { alert('需要密碼才能存取。'); return false; }
                 }
                 return true;
             };
-
-            const resetPassword = () => {
-                localStorage.removeItem('portfolio_password');
-                password.value = '';
-                alert('密碼已清除。');
-            };
-
+            const resetPassword = () => { localStorage.removeItem('portfolio_password'); password.value = ''; alert('密碼已清除。'); };
             const aiContentParsed = computed(() => aiContent.value ? marked.parse(aiContent.value) : '');
 
             const fetchData = async () => {
                 if (!checkPassword()) return;
-                if (API_URL.includes('APPS_SCRIPT_網址')) return alert('請在程式碼第 335 行填入正確的 API URL！');
+                if (API_URL.includes('APPS_SCRIPT_網址')) return alert('請在 HTML 程式碼第 383 行填入 API URL！');
                 isLoading.value = true;
                 try {
                     const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
@@ -284,6 +281,7 @@
                     if (data.status === 'error') throw new Error(data.message);
                     transactions.value = data.transactions || [];
                     cashAdjustments.value = data.cashAdjustments || [];
+                    watchlist.value = data.watchlist || []; // 讀取觀察清單
                 } catch (e) {
                     if(e.message.includes('Wrong Password')) resetPassword();
                     alert(e.message);
@@ -292,10 +290,14 @@
 
             const saveData = async () => {
                 if (!checkPassword()) return;
-                if(!confirm('確定要儲存所有變更嗎？')) return;
+                if(!confirm('確定要儲存變更嗎？')) return;
                 try {
                     const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, {
-                        method: 'POST', body: JSON.stringify({ transactions: transactions.value, cashAdjustments: cashAdjustments.value })
+                        method: 'POST', body: JSON.stringify({ 
+                            transactions: transactions.value, 
+                            cashAdjustments: cashAdjustments.value,
+                            watchlist: watchlist.value // 儲存觀察清單
+                        })
                     });
                     const data = await res.json();
                     if(data.status === 'error') throw new Error(data.message);
@@ -317,44 +319,57 @@
                 } catch (e) { aiContent.value = `**連線錯誤**: ${e.message}`; } finally { aiLoading.value = false; }
             };
 
+            // 觀察清單相關功能
+            const sortedWatchlist = computed(() => [...watchlist.value].sort((a,b) => new Date(b.addedDate) - new Date(a.addedDate)));
+            
+            const addWatchlist = () => {
+                if (!newWatchSymbol.value) return;
+                const symbol = newWatchSymbol.value.toUpperCase();
+                // 檢查是否重複
+                if (watchlist.value.some(w => w.symbol === symbol)) {
+                    alert('該股票已在觀察清單中！');
+                    return;
+                }
+                watchlist.value.push({ 
+                    id: Date.now(), 
+                    symbol: symbol, 
+                    addedDate: new Date().toISOString().split('T')[0] 
+                });
+                newWatchSymbol.value = '';
+            };
+
+            const removeWatchlist = (id) => {
+                if(confirm('確定移除此關注目標？')) {
+                    watchlist.value = watchlist.value.filter(w => w.id !== id);
+                }
+            };
+
             const dashboard = computed(() => {
                 let cash = 0, holdings = {}, totalRealizedPnL = 0, investedAmount = 0, monthlyStats = {};
                 cashAdjustments.value.forEach(adj => cash += adj.amount);
-                
                 const sorted = [...transactions.value].sort((a,b) => new Date(a.date)-new Date(b.date));
                 sorted.forEach(t => {
                     const sym = t.symbol.toUpperCase();
-                    // 初始化持倉物件，包含 totalCost
                     if(!holdings[sym]) holdings[sym] = {shares:0, totalCost:0, avgCost:0};
-                    
                     const amt = t.price * t.shares;
-                    
                     if(t.type === 'buy') {
-                        cash -= amt;
-                        holdings[sym].totalCost += amt; // 買入時增加總成本
+                        cash -= amt; 
+                        holdings[sym].totalCost += amt;
                         holdings[sym].shares += t.shares;
-                        if(holdings[sym].shares > 0) holdings[sym].avgCost = holdings[sym].totalCost / holdings[sym].shares;
+                        if(holdings[sym].shares>0) holdings[sym].avgCost = holdings[sym].totalCost/holdings[sym].shares;
                     } else {
-                        cash += amt;
-                        // 賣出時，依比例扣除成本
-                        const cost = holdings[sym].avgCost * t.shares;
+                        cash += amt; 
+                        const cost = holdings[sym].avgCost * t.shares; 
                         const pnl = amt - cost;
-                        
-                        totalRealizedPnL += pnl;
+                        totalRealizedPnL += pnl; 
                         const m = t.date.substring(0,7);
-                        if(!monthlyStats[m]) monthlyStats[m] = {pnl:0};
-                        monthlyStats[m].pnl += pnl;
-                        
-                        holdings[sym].shares -= t.shares;
-                        holdings[sym].totalCost -= cost; // 賣出時減少總成本
+                        if(!monthlyStats[m]) monthlyStats[m] = {pnl:0}; monthlyStats[m].pnl += pnl;
+                        holdings[sym].shares -= t.shares; 
+                        holdings[sym].totalCost -= cost;
                     }
                 });
-
-                // 計算當前總投入成本
-                for(let s in holdings) if(holdings[s].shares > 0) investedAmount += holdings[s].totalCost;
-                
+                for(let s in holdings) if(holdings[s].shares>0) investedAmount += holdings[s].totalCost;
                 const sortedMonthly = Object.keys(monthlyStats).sort().reverse().reduce((obj, key) => { obj[key] = monthlyStats[key]; return obj; }, {});
-                
                 return { cash, holdings, totalRealizedPnL, investedAmount, monthlyStats: sortedMonthly };
             });
 
@@ -377,17 +392,19 @@
                 return res.sort((a,b)=>new Date(b.date)-new Date(a.date));
             });
             const sortedAdjustments = computed(() => [...cashAdjustments.value].sort((a,b)=>new Date(b.date)-new Date(a.date)));
-
-            const addTransaction = () => {
-                if(!form.symbol) return;
-                transactions.value.push({ id:Date.now(), date:form.date, type:form.type, symbol:form.symbol.toUpperCase(), price:form.price, shares:form.shares });
-                form.symbol=''; form.price=''; form.shares='';
-            };
-            const removeTransaction = (id) => { if(confirm('確定刪除此交易？')) transactions.value=transactions.value.filter(t=>t.id!==id); };
+            const addTransaction = () => { if(!form.symbol) return; transactions.value.push({ id:Date.now(), date:form.date, type:form.type, symbol:form.symbol.toUpperCase(), price:form.price, shares:form.shares }); form.symbol=''; form.price=''; form.shares=''; };
+            const removeTransaction = (id) => { if(confirm('確定刪除？')) transactions.value=transactions.value.filter(t=>t.id!==id); };
             const addCashAdjustment = () => { cashAdjustments.value.push({id:Date.now(), date:cashForm.date, amount:cashForm.amount, note:cashForm.note}); showCashModal.value=false; };
             const formatCurrency = (val, d=0) => (val||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
-
-            return { API_URL, dashboard, form, cashForm, showCashModal, password, isLoading, transactions, cashAdjustments, sortedTransactions, sortedAdjustments, fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, formatCurrency, resetPassword, showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal };
+            
+            return { 
+                API_URL, dashboard, form, cashForm, showCashModal, password, isLoading, 
+                transactions, cashAdjustments, watchlist, // Export watchlist
+                sortedTransactions, sortedAdjustments, sortedWatchlist, // Export sorted watchlist
+                fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, 
+                formatCurrency, resetPassword, showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal,
+                newWatchSymbol, addWatchlist, removeWatchlist // Export watchlist functions
+            };
         }
     }).mount('#app');
 </script>
