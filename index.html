@@ -3,18 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>投資組合管理 (Google Sheets 同步版)</title>
+    <title>投資組合 (新聞與論壇版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
         body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; }
-        /* 台灣股市習慣：紅漲綠跌 */
         .text-up { color: #ef4444; } 
         .text-down { color: #22c55e; }
         .bg-up { background-color: #fee2e2; color: #b91c1c; }
         .bg-down { background-color: #dcfce7; color: #15803d; }
-        
-        /* Loading 動畫 */
         .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #3498db; width: 20px; height: 20px; -webkit-animation: spin 1s linear infinite; animation: spin 1s linear infinite; }
         @-webkit-keyframes spin { 0% { -webkit-transform: rotate(0deg); } 100% { -webkit-transform: rotate(360deg); } }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -35,9 +32,9 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 投資組合管理
-                <span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full border border-green-200">Sheets Sync</span>
+                <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full border border-indigo-200">News & Forum</span>
             </h1>
-            <p class="text-gray-500 text-sm">數據儲存於 Google 試算表</p>
+            <p class="text-gray-500 text-sm">數據同步 + 市場情報</p>
         </div>
         <div class="space-x-2">
             <button @click="fetchData" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-medium transition">🔄 同步數據</button>
@@ -120,7 +117,7 @@
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
                     <h2 class="font-bold text-gray-800">當前持倉 (Holdings)</h2>
-                    <span class="text-xs text-gray-500">*平均成本法計算</span>
+                    <span class="text-xs text-gray-500">*點擊「資訊」查看新聞</span>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm text-left">
@@ -129,7 +126,7 @@
                                 <th class="p-3">代號</th>
                                 <th class="p-3 text-right">持有股數</th>
                                 <th class="p-3 text-right">平均成本</th>
-                                <th class="p-3 text-right">總投入成本</th>
+                                <th class="p-3 text-center">操作</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y">
@@ -137,7 +134,11 @@
                                 <td class="p-3 font-bold">{{ symbol }}</td>
                                 <td class="p-3 text-right">{{ holding.shares }}</td>
                                 <td class="p-3 text-right">{{ formatCurrency(holding.avgCost, 3) }}</td>
-                                <td class="p-3 text-right">{{ formatCurrency(holding.totalCost) }}</td>
+                                <td class="p-3 text-center">
+                                    <button @click="openNewsModal(symbol)" class="bg-indigo-100 text-indigo-700 px-3 py-1 rounded hover:bg-indigo-200 text-xs font-medium">
+                                        📰 資訊
+                                    </button>
+                                </td>
                             </tr>
                             <tr v-if="Object.keys(dashboard.holdings).length === 0 || Object.values(dashboard.holdings).every(h => h.shares <= 0)">
                                 <td colspan="4" class="p-8 text-center text-gray-400">尚無持倉數據</td>
@@ -160,7 +161,6 @@
                                 <th class="p-3">代號</th>
                                 <th class="p-3 text-right">價格</th>
                                 <th class="p-3 text-right">股數</th>
-                                <th class="p-3 text-right">總金額</th>
                                 <th class="p-3 text-right">損益 (P&L)</th>
                                 <th class="p-3 text-center">操作</th>
                             </tr>
@@ -176,18 +176,13 @@
                                 <td class="p-3 font-medium">{{ t.symbol }}</td>
                                 <td class="p-3 text-right">{{ formatCurrency(t.price) }}</td>
                                 <td class="p-3 text-right">{{ t.shares }}</td>
-                                <td class="p-3 text-right text-gray-500">{{ formatCurrency(t.totalAmount) }}</td>
-                                
                                 <td class="p-3 text-right font-bold">
                                     <span v-if="t.type === 'sell'" :class="t.realizedPnL >= 0 ? 'text-up' : 'text-down'">
                                         {{ t.realizedPnL >= 0 ? '+' : '' }}{{ formatCurrency(t.realizedPnL) }}
-                                        <span class="text-xs font-normal text-gray-400 block">
-                                            ({{ t.roi.toFixed(1) }}%)
-                                        </span>
+                                        <span class="text-xs font-normal text-gray-400 block">({{ t.roi.toFixed(1) }}%)</span>
                                     </span>
                                     <span v-else class="text-gray-300">-</span>
                                 </td>
-
                                 <td class="p-3 text-center">
                                     <button @click="removeTransaction(t.id)" class="text-gray-400 hover:text-red-500">×</button>
                                 </td>
@@ -199,7 +194,6 @@
         </div>
 
         <div class="space-y-8">
-            
             <div class="bg-white rounded-lg shadow-sm overflow-hidden">
                 <div class="p-4 border-b bg-gray-50">
                     <h2 class="font-bold text-gray-800">月度損益統計</h2>
@@ -213,9 +207,6 @@
                             </div>
                             <div class="text-xs text-gray-400">交易量: {{ stat.count }} 筆</div>
                         </div>
-                    </div>
-                     <div v-if="Object.keys(dashboard.monthlyStats).length === 0" class="text-center text-gray-400 py-4">
-                        尚無賣出紀錄
                     </div>
                 </div>
             </div>
@@ -242,29 +233,98 @@
                     </table>
                 </div>
             </div>
-
         </div>
     </div>
 
     <div v-if="showCashModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
         <div class="bg-white p-6 rounded-lg w-96 shadow-xl">
-            <h3 class="text-lg font-bold mb-4">資金調整 (入金/出金)</h3>
+            <h3 class="text-lg font-bold mb-4">資金調整</h3>
             <div class="space-y-3">
-                <div>
-                    <label class="block text-xs text-gray-500 mb-1">日期</label>
-                    <input type="date" v-model="cashForm.date" class="w-full border rounded p-2">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-500 mb-1">金額 (負數代表出金)</label>
-                    <input type="number" v-model.number="cashForm.amount" class="w-full border rounded p-2" placeholder="例如: 10000">
-                </div>
-                <div>
-                    <label class="block text-xs text-gray-500 mb-1">備註</label>
-                    <input type="text" v-model="cashForm.note" class="w-full border rounded p-2" placeholder="例如: 初始資金">
-                </div>
+                <input type="date" v-model="cashForm.date" class="w-full border rounded p-2">
+                <input type="number" v-model.number="cashForm.amount" class="w-full border rounded p-2" placeholder="金額 (負數為出金)">
+                <input type="text" v-model="cashForm.note" class="w-full border rounded p-2" placeholder="備註">
                 <div class="flex space-x-2 mt-4">
                     <button @click="addCashAdjustment" class="flex-1 bg-blue-600 text-white py-2 rounded">確認</button>
                     <button @click="showCashModal = false" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded">取消</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div v-if="showNewsModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+            <div class="p-4 bg-indigo-600 text-white flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-bold flex items-center gap-2">
+                        {{ selectedSymbol }} 市場情報
+                        <span class="text-xs bg-indigo-500 px-2 py-0.5 rounded text-indigo-100">Live</span>
+                    </h3>
+                </div>
+                <button @click="showNewsModal = false" class="text-indigo-200 hover:text-white text-2xl">&times;</button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-0 md:flex">
+                
+                <div class="md:w-2/3 p-4 md:p-6 border-b md:border-b-0 md:border-r border-gray-200 bg-gray-50">
+                    <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                        <span class="mr-2">📰</span> 最新新聞 (Google News)
+                    </h4>
+                    
+                    <div v-if="newsLoading" class="flex justify-center py-8">
+                        <div class="loader border-indigo-500"></div>
+                    </div>
+                    
+                    <div v-else-if="newsList.length === 0" class="text-center text-gray-500 py-8">
+                        暫無相關新聞，或 Google News 無法讀取。
+                    </div>
+
+                    <div v-else class="space-y-4">
+                        <a v-for="(item, index) in newsList" :key="index" :href="item.link" target="_blank" class="block bg-white p-4 rounded shadow-sm hover:shadow-md transition border hover:border-indigo-300 group">
+                            <h5 class="font-bold text-gray-800 group-hover:text-indigo-600 mb-1 leading-snug">{{ item.title }}</h5>
+                            <div class="flex justify-between items-center mt-2">
+                                <span class="text-xs text-gray-400">{{ item.pubDate }}</span>
+                                <span class="text-xs text-indigo-500 font-medium">閱讀全文 &rarr;</span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="md:w-1/3 p-4 md:p-6 bg-white">
+                    <h4 class="font-bold text-gray-700 mb-4 flex items-center">
+                        <span class="mr-2">💬</span> 論壇與討論區 (傳送門)
+                    </h4>
+                    <p class="text-xs text-gray-500 mb-4">點擊下方按鈕前往各大論壇搜尋該標的：</p>
+
+                    <div class="grid grid-cols-1 gap-3">
+                        <div v-if="isTaiwanStock(selectedSymbol)" class="space-y-3">
+                            <a :href="`https://www.google.com/search?q=${selectedSymbol}+site:ptt.cc`" target="_blank" class="flex items-center justify-center w-full py-3 bg-gray-800 text-white rounded hover:bg-black transition">
+                                <span class="mr-2">📺</span> PTT 討論 (Google)
+                            </a>
+                            <a :href="`https://tw.stock.yahoo.com/quote/${selectedSymbol}/discussion`" target="_blank" class="flex items-center justify-center w-full py-3 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
+                                <span class="mr-2">Y!</span> Yahoo 股市討論區
+                            </a>
+                            <a :href="`https://www.mobile01.com/googlesearch.php?q=${selectedSymbol}`" target="_blank" class="flex items-center justify-center w-full py-3 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                                <span class="mr-2">📱</span> Mobile01 理財版
+                            </a>
+                        </div>
+
+                        <div v-else class="space-y-3">
+                            <a :href="`https://www.reddit.com/search/?q=$${selectedSymbol}`" target="_blank" class="flex items-center justify-center w-full py-3 bg-orange-500 text-white rounded hover:bg-orange-600 transition">
+                                <span class="mr-2">🤖</span> Reddit ($ {{selectedSymbol}})
+                            </a>
+                            <a :href="`https://finance.yahoo.com/quote/${selectedSymbol}/community`" target="_blank" class="flex items-center justify-center w-full py-3 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
+                                <span class="mr-2">Y!</span> Yahoo Finance
+                            </a>
+                        </div>
+
+                        <hr class="border-gray-100 my-2">
+                        <a :href="`https://www.google.com/search?q=${selectedSymbol}+stock`" target="_blank" class="flex items-center justify-center w-full py-3 bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition">
+                            <span class="mr-2">🔍</span> Google 搜尋
+                        </a>
+                        <a :href="`https://www.tradingview.com/chart/?symbol=${selectedSymbol}`" target="_blank" class="flex items-center justify-center w-full py-3 bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
+                            <span class="mr-2">📈</span> TradingView 線圖
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -280,6 +340,7 @@
     // ==========================================
     const API_URL = 'https://script.google.com/macros/s/AKfycbyzdP8JX6bWyHFL4pDbLBnq3iTe3I8pLKEdGjLSClfUMNnqQ8eJKLItM1X_mY7yoFoE/exec';
 
+
     createApp({
         setup() {
             // 基礎狀態
@@ -290,7 +351,12 @@
             const loadingMsg = ref('');
             const unsavedChanges = ref(false);
 
-            // 表單綁定
+            // 新增：新聞與 Modal 狀態
+            const showNewsModal = ref(false);
+            const selectedSymbol = ref('');
+            const newsList = ref([]);
+            const newsLoading = ref(false);
+
             const form = reactive({
                 date: new Date().toISOString().split('T')[0],
                 type: 'buy',
@@ -305,17 +371,12 @@
                 note: ''
             });
 
-            // 初始化：從 Google Sheets 讀取數據
             onMounted(() => {
                 fetchData();
             });
 
-            // 標記變更
-            const markAsChanged = () => {
-                unsavedChanges.value = true;
-            };
+            const markAsChanged = () => unsavedChanges.value = true;
 
-            // 從後端讀取
             const fetchData = async () => {
                 if (API_URL === 'YOUR_GOOGLE_SCRIPT_URL') {
                     alert('請先在程式碼中填入您的 Google Apps Script URL！');
@@ -326,9 +387,7 @@
                 try {
                     const res = await fetch(`${API_URL}?action=read`);
                     const data = await res.json();
-                    
                     if(data.status === 'error') throw new Error(data.message);
-
                     transactions.value = data.transactions || [];
                     cashAdjustments.value = data.cashAdjustments || [];
                     unsavedChanges.value = false;
@@ -339,7 +398,6 @@
                 }
             };
 
-            // 儲存到後端
             const saveData = async () => {
                 isLoading.value = true;
                 loadingMsg.value = '正在儲存至 Google Sheets...';
@@ -351,7 +409,6 @@
                             cashAdjustments: cashAdjustments.value
                         })
                     });
-                    
                     const result = await res.json();
                     if (result.status === 'success') {
                         unsavedChanges.value = false;
@@ -360,13 +417,62 @@
                         throw new Error(result.message);
                     }
                 } catch (e) {
-                    alert('儲存失敗 (可能是網路問題或腳本錯誤): ' + e.message);
+                    alert('儲存失敗: ' + e.message);
                 } finally {
                     isLoading.value = false;
                 }
             };
 
-            // 核心邏輯：計算儀表板總覽數據 (總資產、總持倉、總損益)
+            // ========== 新增功能：新聞與論壇邏輯 ==========
+
+            // 判斷是否為台股 (假設全是數字為台股，否則為美股)
+            const isTaiwanStock = (symbol) => {
+                return /^\d+/.test(symbol);
+            };
+
+            const openNewsModal = async (symbol) => {
+                selectedSymbol.value = symbol;
+                showNewsModal.value = true;
+                newsLoading.value = true;
+                newsList.value = [];
+
+                try {
+                    // 使用 RSS 轉 JSON 服務來繞過 CORS 並讀取 Google News
+                    // 根據是否為台股，調整搜尋關鍵字以獲得更精準的中文或英文新聞
+                    let query = symbol;
+                    if (isTaiwanStock(symbol)) {
+                        // 台股：搜尋 "2330" 或 "2330 股"
+                        query = `${symbol}`; 
+                    } else {
+                        // 美股：搜尋 "AAPL stock"
+                        query = `${symbol} stock`;
+                    }
+
+                    // 台灣地區 + 繁體中文
+                    const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=zh-TW&gl=TW&ceid=TW:zh-Hant`;
+                    
+                    // 使用 rss2json API (免費版有限制，但個人使用通常足夠)
+                    const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+                    
+                    const res = await fetch(apiUrl);
+                    const data = await res.json();
+                    
+                    if (data.status === 'ok') {
+                        // 只取前 10 則，並簡單格式化日期
+                        newsList.value = data.items.slice(0, 10).map(item => ({
+                            title: item.title,
+                            link: item.link,
+                            pubDate: item.pubDate.split(' ')[0] // 只取日期部分
+                        }));
+                    }
+                } catch (e) {
+                    console.error("新聞讀取失敗", e);
+                } finally {
+                    newsLoading.value = false;
+                }
+            };
+            // ==========================================
+
             const dashboard = computed(() => {
                 const sorted = [...transactions.value].sort((a, b) => new Date(a.date) - new Date(b.date));
                 let cash = 0;
@@ -375,10 +481,8 @@
                 let totalRealizedPnL = 0;
                 let investedAmount = 0;
 
-                // 1. 計算現金調整
                 cashAdjustments.value.forEach(adj => cash += adj.amount);
 
-                // 2. 遍歷交易
                 sorted.forEach(t => {
                     const sym = t.symbol.toUpperCase();
                     if (!holdings[sym]) holdings[sym] = { shares: 0, totalCost: 0, avgCost: 0 };
@@ -393,26 +497,20 @@
                         cash += total;
                         const costBasis = holdings[sym].avgCost * t.shares;
                         const realized = total - costBasis;
-                        
                         totalRealizedPnL += realized;
-                        
-                        // 月度
                         const month = t.date.substring(0, 7);
                         if (!monthlyStats[month]) monthlyStats[month] = { pnl: 0, count: 0 };
                         monthlyStats[month].pnl += realized;
                         monthlyStats[month].count += 1;
-
                         holdings[sym].shares -= t.shares;
                         holdings[sym].totalCost -= costBasis;
                     }
                 });
 
-                // 計算當前投入成本
                 for (let sym in holdings) {
                     if (holdings[sym].shares > 0) investedAmount += holdings[sym].totalCost;
                 }
 
-                // 月份排序
                 const sortedMonthly = Object.keys(monthlyStats).sort().reverse().reduce((obj, key) => { 
                     obj[key] = monthlyStats[key]; 
                     return obj;
@@ -421,13 +519,10 @@
                 return { cash, holdings, monthlyStats: sortedMonthly, totalRealizedPnL, investedAmount };
             });
 
-            // 核心邏輯：計算每筆交易的詳細損益 (用於列表顯示)
             const sortedTransactions = computed(() => {
-                // 1. 先按時間正序排列，以正確計算成本流動
                 const chronological = [...transactions.value].sort((a, b) => new Date(a.date) - new Date(b.date));
                 const tempHoldings = {};
                 
-                // 2. 逐步計算
                 const processed = chronological.map(t => {
                     const sym = t.symbol.toUpperCase();
                     if (!tempHoldings[sym]) tempHoldings[sym] = { shares: 0, totalCost: 0, avgCost: 0 };
@@ -446,20 +541,11 @@
                         const costBasis = tempHoldings[sym].avgCost * t.shares;
                         realizedPnL = totalAmount - costBasis;
                         if(costBasis > 0) roi = (realizedPnL / costBasis) * 100;
-
                         tempHoldings[sym].shares -= t.shares;
                         tempHoldings[sym].totalCost -= costBasis;
                     }
-
-                    return {
-                        ...t,
-                        totalAmount: totalAmount,
-                        realizedPnL: realizedPnL,
-                        roi: roi
-                    };
+                    return { ...t, totalAmount, realizedPnL, roi };
                 });
-
-                // 3. 最後倒序排列 (最新的在最上面)
                 return processed.sort((a, b) => new Date(b.date) - new Date(a.date));
             });
 
@@ -467,10 +553,8 @@
                 return [...cashAdjustments.value].sort((a, b) => new Date(b.date) - new Date(a.date));
             });
 
-            // 操作方法
             const addTransaction = () => {
                 if (!form.symbol || !form.price || !form.shares) return alert('請填寫完整資訊');
-                
                 transactions.value.push({
                     id: Date.now(),
                     date: form.date,
@@ -479,7 +563,6 @@
                     price: parseFloat(form.price),
                     shares: parseFloat(form.shares)
                 });
-                
                 form.symbol = ''; form.price = ''; form.shares = '';
                 markAsChanged();
             };
@@ -519,7 +602,9 @@
             return {
                 form, cashForm, showCashModal, dashboard, sortedTransactions, sortedAdjustments,
                 addTransaction, removeTransaction, addCashAdjustment, removeAdjustment,
-                formatCurrency, fetchData, saveData, isLoading, loadingMsg, unsavedChanges
+                formatCurrency, fetchData, saveData, isLoading, loadingMsg, unsavedChanges,
+                // New exports
+                showNewsModal, selectedSymbol, newsList, newsLoading, openNewsModal, isTaiwanStock
             };
         }
     }).mount('#app');
