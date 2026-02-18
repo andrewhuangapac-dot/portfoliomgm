@@ -113,8 +113,11 @@
                 </div>
                 
                 <div class="overflow-y-auto flex-1">
-                    <div v-for="rec in sortedRecommendations.slice(0, 8)" :key="rec.id" class="p-3 border-b border-slate-100 hover:bg-slate-50 text-sm">
-                        <div class="flex justify-between items-center mb-1">
+                    <div v-for="rec in sortedRecommendations" :key="rec.id" class="p-3 border-b border-slate-100 hover:bg-slate-50 text-sm relative group">
+                        
+                        <button @click="removeRecommendation(rec.id)" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold px-2" title="刪除此公告">×</button>
+
+                        <div class="flex justify-between items-center mb-1 pr-6">
                             <span class="font-bold text-slate-800 text-base">{{ rec.symbol }}</span>
                             <span class="text-xs text-slate-400">{{ rec.date }}</span>
                         </div>
@@ -125,6 +128,7 @@
                             </div>
                             <span class="text-slate-600 font-bold">@ ${{ formatCurrency(rec.price) }}</span>
                         </div>
+                        
                         <div v-if="rec.analysis" class="mt-2">
                             <button @click="rec.showDetails = !rec.showDetails" class="text-xs text-blue-500 hover:text-blue-700 underline flex items-center gap-1">
                                 {{ rec.showDetails ? '收起解讀' : '查看 AI 觀點' }}
@@ -215,7 +219,7 @@
             const aiContent = ref('');
             const showBoard = ref(true); 
             const showRecForm = ref(false);
-            const isGeneratingAnalysis = ref(false); // 生成分析的 Loading 狀態
+            const isGeneratingAnalysis = ref(false);
             
             const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
             const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
@@ -292,35 +296,22 @@
             };
             const removeWatchlist = (id) => { if(confirm('確定移除？')) watchlist.value = watchlist.value.filter(w => w.id !== id); };
 
-            // 🔴 新增：自動生成分析
             const generateAnalysis = async () => {
                 if (!recForm.symbol) return alert('請先輸入代號 (例如 NVDA)');
                 if (!checkPassword()) return;
-                
                 isGeneratingAnalysis.value = true;
                 const symbol = recForm.symbol.toUpperCase();
-                
                 try {
                     const res = await fetch(`${API_URL}?action=analyze&symbol=${symbol}&password=${encodeURIComponent(password.value)}`);
                     const data = await res.json();
-                    
-                    if (data.status === 'success') {
-                        // 填入分析結果到 textarea
-                        recForm.analysis = data.analysis;
-                    } else {
-                        alert(`分析失敗: ${data.message}`);
-                    }
-                } catch (e) {
-                    alert(`連線錯誤: ${e.message}`);
-                } finally {
-                    isGeneratingAnalysis.value = false;
-                }
+                    if (data.status === 'success') recForm.analysis = data.analysis;
+                    else alert(`分析失敗: ${data.message}`);
+                } catch (e) { alert(`連線錯誤: ${e.message}`); } finally { isGeneratingAnalysis.value = false; }
             };
 
             const addRecommendation = () => {
                 if (!recForm.symbol || !recForm.price || !recForm.count) return alert('請填寫完整');
                 const sym = recForm.symbol.toUpperCase();
-                
                 recommendations.value.push({ 
                     id: Date.now(), 
                     date: new Date().toISOString().split('T')[0], 
@@ -328,11 +319,17 @@
                     symbol: sym, 
                     price: recForm.price, 
                     count: recForm.count,
-                    analysis: recForm.analysis, // 儲存生成的文字
+                    analysis: recForm.analysis,
                     showDetails: false
                 });
-
                 recForm.symbol = ''; recForm.price = ''; recForm.count = 1; recForm.analysis = ''; showRecForm = false;
+            };
+
+            // 🟢 新增：刪除公告函式
+            const removeRecommendation = (id) => {
+                if(confirm('確定刪除此公告？(刪除後請記得按儲存)')) {
+                    recommendations.value = recommendations.value.filter(r => r.id !== id);
+                }
             };
 
             const dashboard = computed(() => {
@@ -366,7 +363,7 @@
             const addCashAdjustment = () => { cashAdjustments.value.push({id:Date.now(), date:cashForm.date, amount:cashForm.amount, note:cashForm.note}); showCashModal.value=false; };
             const formatCurrency = (val, d=0) => (val||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
             
-            return { API_URL, dashboard, form, cashForm, showCashModal, password, isLoading, transactions, cashAdjustments, watchlist, recommendations, sortedTransactions, sortedWatchlist, sortedRecommendations, fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, addWatchlist, removeWatchlist, addRecommendation, formatCurrency, resetPassword, showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal, newWatchSymbol, showBoard, showRecForm, recForm, marked, generateAnalysis, isGeneratingAnalysis };
+            return { API_URL, dashboard, form, cashForm, showCashModal, password, isLoading, transactions, cashAdjustments, watchlist, recommendations, sortedTransactions, sortedWatchlist, sortedRecommendations, fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, addWatchlist, removeWatchlist, addRecommendation, removeRecommendation, formatCurrency, resetPassword, showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal, newWatchSymbol, showBoard, showRecForm, recForm, marked, generateAnalysis, isGeneratingAnalysis };
         }
     }).mount('#app');
 </script>
