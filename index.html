@@ -2,113 +2,97 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>美股投資組合 (AI Pro)</title>
+    <title>美股投資管理系統 (AI Pro)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <style>
-        body { font-family: "Microsoft JhengHei", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; color: #334155; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f8fafc; }
         .text-up { color: #16a34a; } .text-down { color: #dc2626; } 
-        .loader { border: 3px solid #e2e8f0; border-top: 3px solid #2563eb; width: 24px; height: 24px; border-radius: 50%; animation: spin 1s linear infinite; }
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #3b82f6; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .ai-glow { box-shadow: 0 0 20px rgba(37, 99, 235, 0.3); animation: pulse 2s infinite; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); } 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); } }
-        .board-enter-active, .board-leave-active { transition: all 0.5s ease; }
-        .board-enter-from, .board-leave-to { opacity: 0; transform: translateY(20px); }
-        .markdown-sm p { margin-bottom: 4px; }
-        .markdown-sm ul { list-style-type: disc; padding-left: 14px; margin-bottom: 4px; }
+        .ai-card { background: white; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body>
-
-<div id="app" class="min-h-screen p-4 md:p-8 max-w-7xl mx-auto pb-32">
-    
-    <header class="mb-8 flex flex-col md:flex-row justify-between items-center gap-4">
+<body class="p-4 md:p-8">
+<div id="app" class="max-w-7xl mx-auto pb-32">
+    <header class="flex justify-between items-center mb-8">
         <div>
-            <h1 class="text-2xl font-extrabold text-slate-900 flex items-center gap-2 tracking-tight">
-                美股投資組合
-                <span class="bg-blue-600 text-white text-xs px-2 py-1 rounded-md font-bold tracking-wide flex items-center gap-1 shadow-sm">Gemini 2.5 Pro</span>
-            </h1>
-            <p class="text-slate-500 text-sm font-medium">持倉管理 • 潛在目標 • 投資建議看板</p>
+            <h1 class="text-2xl font-bold text-slate-800">美股投資組合 <span class="text-sm bg-blue-600 text-white px-2 py-1 rounded">Gemini 2.5 Pro</span></h1>
+            <p v-if="isLoading" class="text-blue-500 text-xs mt-1 animate-pulse">正在從 Google Finance 抓取最新股價...</p>
         </div>
         <div class="flex gap-2">
-            <button @click="resetPassword" class="px-3 py-2 text-xs text-slate-400 hover:text-slate-600 underline font-medium">重設密碼</button>
-            <button @click="fetchData" class="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg shadow-sm hover:bg-slate-50 text-sm font-bold transition flex items-center gap-2">
-                <span v-if="isLoading" class="loader w-4 h-4 border-slate-400 border-t-transparent"></span>
-                <span>{{ isLoading ? '同步中...' : '🔄 同步數據' }}</span>
-            </button>
-            <button @click="saveData" class="px-4 py-2 bg-slate-900 text-white rounded-lg shadow-md hover:bg-slate-800 text-sm font-bold transition">💾 儲存變更</button>
+            <button @click="fetchData" class="px-4 py-2 bg-white border rounded shadow-sm text-sm font-bold hover:bg-slate-50">🔄 同步</button>
+            <button @click="saveData" class="px-4 py-2 bg-slate-900 text-white rounded shadow text-sm font-bold">💾 儲存</button>
         </div>
     </header>
 
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">可用現金</h3><p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.cash) }}</p></div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">持倉總成本</h3><p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.investedAmount) }}</p></div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">已實現損益</h3><p class="text-2xl font-bold mt-2" :class="dashboard.totalRealizedPnL >= 0 ? 'text-up' : 'text-down'">{{ dashboard.totalRealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalRealizedPnL) }}</p></div>
-        <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="text-slate-400 text-xs font-bold uppercase tracking-wider">淨資產</h3><p class="text-2xl font-bold text-slate-800 mt-2">${{ formatCurrency(dashboard.cash + dashboard.investedAmount) }}</p></div>
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 text-center">
+        <div class="bg-white p-4 rounded-xl border">
+            <p class="text-xs text-slate-400 font-bold">可用現金</p>
+            <p class="text-xl font-bold">${{ formatCurrency(dashboard.cash) }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl border">
+            <p class="text-xs text-slate-400 font-bold">持倉成本</p>
+            <p class="text-xl font-bold">${{ formatCurrency(dashboard.investedAmount) }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl border">
+            <p class="text-xs text-slate-400 font-bold">未實現損益</p>
+            <p class="text-xl font-bold" :class="dashboard.totalUnrealized >= 0 ? 'text-up' : 'text-down'">${{ formatCurrency(dashboard.totalUnrealized) }}</p>
+        </div>
+        <div class="bg-white p-4 rounded-xl border">
+            <p class="text-xs text-slate-400 font-bold">帳戶淨值</p>
+            <p class="text-xl font-bold text-blue-600">${{ formatCurrency(dashboard.cash + dashboard.investedAmount + dashboard.totalUnrealized) }}</p>
+        </div>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div class="lg:col-span-2 space-y-6">
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <h2 class="text-sm font-bold text-slate-700 mb-4 uppercase">新增交易</h2>
-                <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-                    <div class="col-span-2 md:col-span-1"><input type="date" v-model="form.date" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none"></div>
-                    <div class="col-span-2 md:col-span-1"><select v-model="form.type" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-medium"><option value="buy">買入</option><option value="sell">賣出</option></select></div>
-                    <div class="col-span-2 md:col-span-1"><input type="text" v-model="form.symbol" placeholder="代號" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm uppercase font-bold"></div>
-                    <div class="col-span-1"><input type="number" step="0.01" v-model.number="form.price" placeholder="價格" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"></div>
-                    <div class="col-span-1"><input type="number" v-model.number="form.shares" placeholder="股數" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm"></div>
-                    <div class="col-span-2 md:col-span-1"><button @click="addTransaction" class="w-full bg-blue-600 text-white p-2.5 rounded-lg hover:bg-blue-700 text-sm font-bold transition">新增</button></div>
+            <div class="bg-white rounded-xl border overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b font-bold text-sm">當前持倉 (Holdings)</div>
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50 text-slate-500 text-xs">
+                        <tr><th class="p-3 text-left">代號</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">均價</th><th class="p-3 text-right">現價</th><th class="p-3 text-right">損益</th><th class="p-3"></th></tr>
+                    </thead>
+                    <tbody class="divide-y">
+                        <tr v-for="(h, sym) in dashboard.holdings" :key="sym" v-show="h.shares > 0">
+                            <td class="p-3 font-bold">{{ sym }}</td>
+                            <td class="p-3 text-right">{{ h.shares }}</td>
+                            <td class="p-3 text-right text-slate-400">${{ formatCurrency(h.avgCost, 2) }}</td>
+                            <td class="p-3 text-right font-bold text-blue-600">${{ formatCurrency(h.currentPrice, 2) }}</td>
+                            <td class="p-3 text-right font-bold" :class="h.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">
+                                ${{ formatCurrency(h.unrealizedPnL, 0) }}<br><span class="text-[10px]">{{ h.unrealizedPnLPercent }}%</span>
+                            </td>
+                            <td class="p-3 text-center"><button @click="openAIModal(sym)" class="text-blue-500 hover:underline text-xs">AI分析</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl border">
+                <h2 class="text-sm font-bold mb-4">新增交易</h2>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <input type="date" v-model="form.date" class="border rounded p-2 text-sm">
+                    <select v-model="form.type" class="border rounded p-2 text-sm"><option value="buy">買入</option><option value="sell">賣出</option></select>
+                    <input type="text" v-model="form.symbol" placeholder="代號" class="border rounded p-2 text-sm uppercase">
+                    <input type="number" step="0.01" v-model.number="form.price" placeholder="價格" class="border rounded p-2 text-sm">
+                    <input type="number" v-model.number="form.shares" placeholder="股數" class="border rounded p-2 text-sm">
+                    <button @click="addTransaction" class="md:col-span-5 bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700">確認新增</button>
                 </div>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center"><h2 class="font-bold text-slate-700 text-sm uppercase">當前持倉</h2></div>
-                <div class="overflow-x-auto">
+            <div class="bg-white rounded-xl border overflow-hidden">
+                <div class="p-4 bg-slate-50 border-b font-bold text-sm">歷史紀錄</div>
+                <div class="max-h-64 overflow-y-auto">
                     <table class="w-full text-sm text-left">
-                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs font-semibold">
-                            <tr><th class="p-3">代號</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">均價</th><th class="p-3 text-right text-blue-700">總成本</th><th class="p-3 text-center">AI</th></tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            <tr v-for="(holding, symbol) in dashboard.holdings" :key="symbol" v-show="holding.shares > 0">
-                                <td class="p-3 font-bold text-slate-800">{{ symbol }}</td>
-                                <td class="p-3 text-right">{{ holding.shares }}</td>
-                                <td class="p-3 text-right text-slate-500">${{ formatCurrency(holding.avgCost, 2) }}</td>
-                                <td class="p-3 text-right font-bold text-blue-700">${{ formatCurrency(holding.totalCost, 0) }}</td>
-                                <td class="p-3 text-center"><button @click="openAIModal(symbol)" class="bg-white border border-blue-200 text-blue-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-blue-50">解讀</button></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden border-t-4 border-t-orange-400">
-                <div class="p-4 border-b border-slate-100 bg-orange-50 flex justify-between items-center"><h2 class="font-bold text-orange-800 text-sm uppercase">潛在關注目標 (Watchlist)</h2></div>
-                <div class="p-4 bg-white border-b border-slate-100 flex gap-2">
-                    <input type="text" v-model="newWatchSymbol" placeholder="輸入代號 (例如 TSLA)" class="flex-1 border border-slate-300 rounded-lg p-2 text-sm uppercase font-bold focus:ring-2 focus:ring-orange-400 outline-none">
-                    <button @click="addWatchlist" class="bg-orange-500 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-orange-600 transition shadow-sm">加入</button>
-                </div>
-                <table class="w-full text-sm text-left"><tbody class="divide-y divide-slate-100"><tr v-for="item in sortedWatchlist" :key="item.id" class="hover:bg-orange-50/50"><td class="p-3 font-bold text-slate-800 w-1/4">{{ item.symbol }}</td><td class="p-3 text-slate-400 text-xs w-1/4">Added: {{ item.addedDate }}</td><td class="p-3 text-center"><button @click="openAIModal(item.symbol)" class="bg-white border border-orange-200 text-orange-600 px-3 py-1 rounded-full text-xs font-bold hover:bg-orange-50">AI 分析</button></td><td class="p-3 text-right"><button @click="removeWatchlist(item.id)" class="text-slate-300 hover:text-red-500 font-bold px-2 py-1">移除</button></td></tr></tbody></table>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                <div class="p-4 border-b border-slate-100 bg-slate-50"><h2 class="font-bold text-slate-700 text-sm uppercase">交易紀錄</h2></div>
-                <div class="overflow-x-auto max-h-64 overflow-y-auto">
-                    <table class="w-full text-sm text-left">
-                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs sticky top-0"><tr><th class="p-3">日期</th><th class="p-3">代號</th><th class="p-3">操作</th><th class="p-3 text-right">價格</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">損益</th><th class="p-3"></th></tr></thead>
-                        <tbody class="divide-y divide-slate-100">
+                        <thead class="bg-slate-50 text-xs"><tr><th class="p-3">日期</th><th class="p-3">代號</th><th class="p-3">操作</th><th class="p-3 text-right">損益</th><th class="p-3"></th></tr></thead>
+                        <tbody class="divide-y">
                             <tr v-for="t in sortedTransactions" :key="t.id">
-                                <td class="p-3 text-slate-500 text-xs">{{ t.date }}</td>
-                                <td class="p-3 font-bold text-slate-700">{{ t.symbol }}</td>
-                                <td class="p-3"><span :class="t.type==='buy'?'bg-blue-50 text-blue-700':'bg-amber-50 text-amber-700'" class="px-2 py-0.5 rounded text-xs border uppercase">{{ t.type }}</span></td>
-                                <td class="p-3 text-right">${{ formatCurrency(t.price) }}</td>
-                                <td class="p-3 text-right">{{ t.shares }}</td>
-                                <td class="p-3 text-right font-bold">
-                                    <span v-if="t.type==='sell'" :class="t.realizedPnL>=0?'text-up':'text-down'">{{ t.realizedPnL>=0?'+':'' }}${{ formatCurrency(t.realizedPnL, 0) }}</span>
-                                    <span v-else class="text-slate-300">-</span>
-                                </td>
-                                <td class="p-3 text-center"><button @click="removeTransaction(t.id)" class="text-slate-300 hover:text-red-500 font-bold">×</button></td>
+                                <td class="p-3 text-xs text-slate-400">{{ t.date }}</td>
+                                <td class="p-3 font-bold">{{ t.symbol }}</td>
+                                <td class="p-3 text-xs uppercase">{{ t.type }}</td>
+                                <td class="p-3 text-right font-bold" :class="t.realizedPnL >= 0 ? 'text-up' : 'text-down'"><span v-if="t.type==='sell'">${{ formatCurrency(t.realizedPnL, 0) }}</span><span v-else class="text-slate-300">-</span></td>
+                                <td class="p-3 text-center"><button @click="removeTransaction(t.id)" class="text-slate-300 hover:text-red-500">×</button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -117,310 +101,179 @@
         </div>
 
         <div class="space-y-6">
-            <div class="bg-white rounded-xl shadow-sm p-5 border border-slate-200">
-                <h2 class="font-bold text-slate-700 border-b border-slate-100 pb-2 mb-2 text-sm uppercase">月度損益</h2>
-                <div v-for="(stat, month) in dashboard.monthlyStats" :key="month" class="flex justify-between py-2 border-b border-slate-50 last:border-0 text-sm">
-                    <span class="text-slate-600 font-medium">{{ month }}</span>
-                    <span :class="stat.pnl >= 0 ? 'text-up' : 'text-down'" class="font-bold">{{ stat.pnl >= 0 ? '+' : '' }}${{ formatCurrency(stat.pnl, 0) }}</span>
+            <div class="bg-white rounded-xl shadow-xl border overflow-hidden">
+                <div class="p-4 bg-slate-900 text-white font-bold text-sm flex justify-between">
+                    <span>📢 投資建議公告</span>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2">
-        <transition name="board">
-            <div v-if="showBoard" class="bg-white p-0 rounded-xl shadow-2xl border border-slate-200 w-96 overflow-hidden flex flex-col max-h-[600px]">
-                <div class="bg-slate-900 text-white p-3 flex justify-between items-center flex-shrink-0">
-                    <h3 class="font-bold text-sm flex items-center gap-2">📢 AI 投資建議公告</h3>
-                    <button @click="showBoard = false" class="text-slate-400 hover:text-white">&times;</button>
-                </div>
-                
-                <div class="overflow-y-auto flex-1">
-                    <div v-for="rec in sortedRecommendations" :key="rec.id" class="p-3 border-b border-slate-100 hover:bg-slate-50 text-sm relative group">
-                        
-                        <button @click="removeRecommendation(rec.id)" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold px-2" title="刪除">×</button>
-
-                        <div class="flex justify-between items-center mb-1 pr-6">
-                            <span class="font-bold text-slate-800 text-base">{{ rec.symbol }}</span>
-                            <span class="text-xs text-slate-400">{{ rec.date }}</span>
-                        </div>
-                        <div class="flex justify-between items-center">
-                            <div class="flex gap-2">
-                                <span :class="rec.type === 'Buy' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'" class="px-2 py-0.5 rounded text-xs font-bold">{{ rec.type === 'Buy' ? '買入' : '賣出' }}</span>
-                                <span class="text-xs text-orange-600 bg-orange-50 px-2 py-0.5 rounded border border-orange-100">AI數: {{ rec.count }}</span>
-                            </div>
-                            <span class="text-slate-600 font-bold">@ ${{ formatCurrency(rec.price, 2) }}</span>
-                        </div>
-                        
-                        <div v-if="rec.analysis" class="mt-2">
-                            <button @click="rec.showDetails = !rec.showDetails" class="text-xs text-blue-500 hover:text-blue-700 underline flex items-center gap-1">
-                                {{ rec.showDetails ? '收起解讀' : '查看 AI 觀點' }}
-                                <span v-if="!rec.showDetails">▼</span><span v-else>▲</span>
-                            </button>
-                            <div v-if="rec.showDetails" class="mt-2 p-2 bg-slate-100 rounded text-xs text-slate-600 leading-relaxed markdown-sm" v-html="marked.parse(rec.analysis)"></div>
-                        </div>
-                    </div>
-                    <div v-if="recommendations.length === 0" class="p-4 text-center text-slate-400 text-xs">尚無建議</div>
-                </div>
-
-                <div class="p-3 bg-slate-50 border-t border-slate-100 flex-shrink-0">
-                    <button @click="showRecForm = !showRecForm" class="w-full bg-blue-600 text-white py-1.5 rounded text-xs font-bold hover:bg-blue-700">{{ showRecForm ? '取消' : '+ 發布新建議' }}</button>
-                    
-                    <div v-if="showRecForm" class="mt-3 space-y-2">
+                <div class="p-4 bg-slate-50 border-b">
+                    <div class="space-y-2">
+                        <input v-model="recForm.symbol" placeholder="代號" class="w-full border p-2 text-sm uppercase font-bold">
                         <div class="flex gap-2">
-                            <input v-model="recForm.symbol" placeholder="代號" class="w-1/3 border p-1.5 rounded text-xs uppercase font-bold">
-                            <input v-model.number="recForm.price" type="number" step="0.01" placeholder="價格" class="w-1/3 border p-1.5 rounded text-xs">
-                            <input v-model.number="recForm.count" type="number" placeholder="AI數" class="w-1/3 border p-1.5 rounded text-xs">
+                            <select v-model="recForm.type" class="w-1/2 border p-2 text-sm"><option value="Buy">買入</option><option value="Sell">賣出</option></select>
+                            <input v-model.number="recForm.price" step="0.01" type="number" placeholder="建議價" class="w-1/2 border p-2 text-sm">
                         </div>
-                        <select v-model="recForm.type" class="w-full border p-1.5 rounded text-xs"><option value="Buy">買入</option><option value="Sell">賣出</option></select>
-                        
-                        <div class="flex justify-between items-end">
-                            <span class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">觀點摘要 / 解讀</span>
-                            <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="text-[10px] bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 rounded font-bold hover:bg-purple-200 flex items-center gap-1">
-                                <span v-if="isGeneratingAnalysis" class="loader !w-3 !h-3 !border-2 !border-purple-300 !border-t-purple-600"></span>
-                                {{ isGeneratingAnalysis ? '生成中...' : '✨ AI 自動生成' }}
-                            </button>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-400">AI參考數:</span>
+                            <input v-model.number="recForm.count" type="number" class="w-full border p-2 text-sm">
                         </div>
-                        
-                        <textarea v-model="recForm.analysis" placeholder="輸入內容或點擊上方按鈕生成當下 AI 分析..." rows="3" class="w-full border p-1.5 rounded text-xs focus:ring-1 focus:ring-blue-500"></textarea>
-
-                        <button @click="addRecommendation" class="w-full bg-slate-800 text-white py-1.5 rounded text-xs hover:bg-slate-900 mt-1">確認發布</button>
+                        <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="w-full text-xs bg-purple-100 text-purple-700 py-1 rounded font-bold hover:bg-purple-200">
+                            {{ isGeneratingAnalysis ? 'AI 思考中...' : '✨ 自動生成 AI 觀點' }}
+                        </button>
+                        <textarea v-model="recForm.analysis" placeholder="觀點摘要..." rows="3" class="w-full border p-2 text-xs"></textarea>
+                        <button @click="addRecommendation" class="w-full bg-blue-600 text-white py-2 rounded font-bold hover:bg-blue-700">發布公告</button>
                     </div>
                 </div>
-            </div>
-        </transition>
-        <button v-if="!showBoard" @click="showBoard = true" class="bg-slate-900 text-white p-3 rounded-full shadow-lg hover:bg-slate-800 transition transform hover:scale-110 flex items-center gap-2 pr-4">
-            <span class="text-xl">📢</span><span class="text-sm font-bold">公告</span>
-            <span v-if="recommendations.length > 0" class="bg-red-500 text-white text-[10px] px-1.5 rounded-full absolute -top-1 -right-1">{{ recommendations.length }}</span>
-        </button>
-    </div>
-
-    <div v-if="showAIModal" class="fixed inset-0 bg-slate-900 bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden relative border border-slate-200">
-            <div class="p-5 bg-gradient-to-r from-slate-800 to-slate-900 text-white flex justify-between items-center"><h3 class="text-lg font-bold flex items-center gap-2"><span class="text-blue-400">🤖</span> AI 分析 - {{ selectedSymbol }}</h3><button @click="showAIModal = false" class="text-slate-400 hover:text-white text-2xl">&times;</button></div>
-            <div class="flex-1 overflow-y-auto p-6 bg-slate-50">
-                <div v-if="aiLoading" class="flex flex-col items-center justify-center py-12 space-y-6"><div class="w-16 h-16 bg-white rounded-full flex items-center justify-center ai-glow border border-blue-100"><div class="loader"></div></div><p class="text-slate-800 font-bold">AI 正在思考...</p></div>
-                <div v-else>
-                    <div class="bg-white p-6 rounded-xl shadow-sm border border-blue-100 mb-6"><div class="prose prose-sm max-w-none text-slate-700" v-html="aiContentParsed"></div></div>
+                <div class="divide-y max-h-96 overflow-y-auto">
+                    <div v-for="r in sortedRecommendations" :key="r.id" class="p-4 hover:bg-slate-50 relative group">
+                        <button @click="removeRecommendation(r.id)" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold">×</button>
+                        <div class="flex justify-between font-bold"><span>{{ r.symbol }}</span><span class="text-xs text-slate-400">{{ r.date }}</span></div>
+                        <div class="flex justify-between text-sm mt-1">
+                            <span :class="r.type==='Buy'?'text-up':'text-down'">{{ r.type==='Buy'?'買入':'賣出' }} @ ${{ formatCurrency(r.price, 2) }}</span>
+                            <span class="text-xs bg-orange-100 px-1 rounded text-orange-700">AI數: {{ r.count }}</span>
+                        </div>
+                        <div v-if="r.analysis" class="mt-2">
+                            <button @click="r.showDetails = !r.showDetails" class="text-[10px] text-blue-500 underline">{{ r.showDetails ? '隱藏' : '查看觀點' }}</button>
+                            <div v-if="r.showDetails" class="mt-2 text-xs text-slate-600 bg-slate-100 p-2 rounded leading-relaxed" v-html="marked.parse(r.analysis)"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <div v-if="showCashModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div class="bg-white p-6 rounded-lg w-80 shadow-xl border border-slate-100">
-            <h3 class="font-bold mb-4 text-slate-800 uppercase text-sm">調整資金</h3>
-            <input type="date" v-model="cashForm.date" class="w-full border rounded-lg p-2.5 mb-3 text-sm">
-            <input type="number" v-model.number="cashForm.amount" class="w-full border rounded-lg p-2.5 mb-3 text-sm" placeholder="金額 (負數=出金)">
-            <input type="text" v-model="cashForm.note" class="w-full border rounded-lg p-2.5 mb-5 text-sm" placeholder="備註">
-            <div class="flex gap-2"><button @click="addCashAdjustment" class="flex-1 bg-blue-600 text-white py-2.5 rounded-lg text-sm font-bold">確認</button><button @click="showCashModal = false" class="flex-1 bg-slate-100 text-slate-600 py-2.5 rounded-lg text-sm font-bold">取消</button></div>
+
+    <div v-if="showAIModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="p-4 bg-slate-900 text-white flex justify-between font-bold"><span>🤖 AI 深度解讀 - {{ selectedSymbol }}</span><button @click="showAIModal=false">×</button></div>
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50">
+                <div v-if="aiLoading" class="flex flex-col items-center py-12"><div class="loader mb-4"></div><p>Gemini 1.5 Pro 正在分析中...</p></div>
+                <div v-else class="prose prose-sm max-w-none" v-html="marked.parse(aiContent)"></div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    const { createApp, reactive, computed, onMounted, ref } = Vue;
+const { createApp, reactive, computed, onMounted, ref } = Vue;
+const API_URL = 'https://script.google.com/macros/s/AKfycby4Dxb1Ql7gNIc1z0UzVp7wXT5WpW_yADWWZvYYVKwtOes-q4inuSyYE28wfjVMJHO1/exec'; 
 
-    // ==========================================
-    // 🔴 這裡必須填入您的 Apps Script 網址 (結尾是 /exec)
-    // ==========================================
-    const API_URL = 'https://script.google.com/macros/s/AKfycbx95Q2OXfIP7X-ygDW-fpoJESl6lAUk6bY1h8JW0_ipq8ErmG5YPPYkekXHfBscpGRr/exec'; 
-    // ==========================================
+createApp({
+    setup() {
+        const transactions = ref([]);
+        const currentPrices = ref({});
+        const cashAdjustments = ref([]);
+        const watchlist = ref([]);
+        const recommendations = ref([]);
+        const isLoading = ref(false);
+        const isGeneratingAnalysis = ref(false);
+        const password = ref(localStorage.getItem('p_pass') || '');
+        const showAIModal = ref(false);
+        const aiLoading = ref(false);
+        const selectedSymbol = ref('');
+        const aiContent = ref('');
+        const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
+        const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '' });
 
-    createApp({
-        setup() {
-            const transactions = ref([]);
-            const cashAdjustments = ref([]);
-            const watchlist = ref([]); 
-            const recommendations = ref([]); // AI 建議
-            const showCashModal = ref(false);
-            const isLoading = ref(false);
-            const password = ref(localStorage.getItem('portfolio_password') || '');
-            const showAIModal = ref(false);
-            const aiLoading = ref(false);
-            const selectedSymbol = ref('');
-            const aiContent = ref('');
-            const showBoard = ref(true); 
-            const showRecForm = ref(false);
-            const isGeneratingAnalysis = ref(false);
-            
-            const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
-            const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
-            const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '' });
-            const newWatchSymbol = ref('');
+        onMounted(() => { if (password.value) fetchData(); });
 
-            onMounted(() => { if (password.value) fetchData(); });
+        const checkPassword = () => {
+            if (!password.value) {
+                const p = prompt('請輸入管理密碼:');
+                if (p) { password.value = p; localStorage.setItem('p_pass', p); return true; }
+                return false;
+            }
+            return true;
+        };
 
-            const checkPassword = () => {
-                if (!password.value) {
-                    const input = prompt('請輸入密碼：');
-                    if (input) { password.value = input; localStorage.setItem('portfolio_password', input); } 
-                    else { alert('需要密碼'); return false; }
+        const fetchData = async () => {
+            if (!checkPassword()) return;
+            isLoading.value = true;
+            try {
+                const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
+                const data = await res.json();
+                if (data.status === 'error') throw new Error(data.message);
+                transactions.value = data.transactions || [];
+                currentPrices.value = data.currentPrices || {};
+                cashAdjustments.value = data.cashAdjustments || [];
+                watchlist.value = data.watchlist || [];
+                recommendations.value = (data.recommendations || []).map(r => ({...r, showDetails: false}));
+            } catch (e) { alert(e.message); password.value = ''; } finally { isLoading.value = false; }
+        };
+
+        const saveData = async () => {
+            if (!confirm('儲存所有變更？')) return;
+            try {
+                const cleanRecs = recommendations.value.map(({showDetails, ...rest}) => rest);
+                await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, {
+                    method: 'POST', body: JSON.stringify({ transactions: transactions.value, cashAdjustments: cashAdjustments.value, watchlist: watchlist.value, recommendations: cleanRecs })
+                });
+                alert('已儲存！');
+            } catch (e) { alert('儲存失敗'); }
+        };
+
+        const generateAnalysis = async () => {
+            if (!recForm.symbol) return alert('請輸入代號');
+            isGeneratingAnalysis.value = true;
+            try {
+                const res = await fetch(`${API_URL}?action=analyze&symbol=${recForm.symbol}&password=${encodeURIComponent(password.value)}`);
+                const data = await res.json();
+                recForm.analysis = data.analysis;
+            } catch (e) { alert('AI分析失敗'); } finally { isGeneratingAnalysis.value = false; }
+        };
+
+        const openAIModal = async (s) => {
+            selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true;
+            try {
+                const res = await fetch(`${API_URL}?action=analyze&symbol=${s}&password=${encodeURIComponent(password.value)}`);
+                const data = await res.json();
+                aiContent.value = data.analysis;
+            } catch (e) { aiContent.value = '讀取失敗'; } finally { aiLoading.value = false; }
+        };
+
+        const dashboard = computed(() => {
+            let cash = 0, holdings = {}, investedAmount = 0, totalUnrealized = 0, monthlyStats = {};
+            cashAdjustments.value.forEach(a => cash += a.amount);
+            [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(t => {
+                const sym = t.symbol.toUpperCase();
+                if(!holdings[sym]) holdings[sym] = {shares:0, totalCost:0, avgCost:0, currentPrice:0, unrealizedPnL:0};
+                const amt = t.price * t.shares;
+                if (t.type === 'buy') {
+                    cash -= amt; holdings[sym].totalCost += amt; holdings[sym].shares += t.shares;
+                } else {
+                    cash += amt; const cost = holdings[sym].avgCost * t.shares; holdings[sym].totalCost -= cost; holdings[sym].shares -= t.shares;
                 }
-                return true;
-            };
-            const resetPassword = () => { localStorage.removeItem('portfolio_password'); password.value = ''; alert('密碼已清除'); };
-            const aiContentParsed = computed(() => aiContent.value ? marked.parse(aiContent.value) : '');
-
-            const fetchData = async () => {
-                if (!checkPassword()) return;
-                isLoading.value = true;
-                try {
-                    const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
-                    const data = await res.json();
-                    if (data.status === 'error') throw new Error(data.message);
-                    transactions.value = data.transactions || [];
-                    cashAdjustments.value = data.cashAdjustments || [];
-                    watchlist.value = data.watchlist || [];
-                    recommendations.value = (data.recommendations || []).map(r => ({...r, showDetails: false}));
-                } catch (e) {
-                    if(e.message.includes('Wrong Password')) resetPassword();
-                    alert(e.message);
-                } finally { isLoading.value = false; }
-            };
-
-            const saveData = async () => {
-                if (!checkPassword()) return;
-                if(!confirm('儲存變更？')) return;
-                try {
-                    const cleanRecs = recommendations.value.map(({showDetails, ...rest}) => rest);
-                    await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, {
-                        method: 'POST', body: JSON.stringify({ 
-                            transactions: transactions.value, 
-                            cashAdjustments: cashAdjustments.value,
-                            watchlist: watchlist.value,
-                            recommendations: cleanRecs
-                        })
-                    });
-                    alert('儲存成功！');
-                } catch (e) { alert('儲存失敗: ' + e.message); }
-            };
-
-            const openAIModal = async (symbol) => {
-                if (!checkPassword()) return;
-                selectedSymbol.value = symbol;
-                showAIModal.value = true;
-                aiLoading.value = true;
-                aiContent.value = '';
-                try {
-                    const res = await fetch(`${API_URL}?action=analyze&symbol=${symbol}&password=${encodeURIComponent(password.value)}`);
-                    const data = await res.json();
-                    if (data.status === 'success') aiContent.value = data.analysis;
-                    else aiContent.value = `**分析失敗**: ${data.message}`;
-                } catch (e) { aiContent.value = `**連線錯誤**: ${e.message}`; } finally { aiLoading.value = false; }
-            };
-
-            const addWatchlist = () => {
-                if (!newWatchSymbol.value) return;
-                const sym = newWatchSymbol.value.toUpperCase();
-                if (watchlist.value.some(w => w.symbol === sym)) return alert('已存在');
-                watchlist.value.push({ id: Date.now(), symbol: sym, addedDate: new Date().toISOString().split('T')[0] });
-                newWatchSymbol.value = '';
-            };
-            const removeWatchlist = (id) => { if(confirm('確定移除？')) watchlist.value = watchlist.value.filter(w => w.id !== id); };
-
-            const generateAnalysis = async () => {
-                if (!recForm.symbol) return alert('請先輸入代號 (例如 NVDA)');
-                if (!checkPassword()) return;
-                isGeneratingAnalysis.value = true;
-                const symbol = recForm.symbol.toUpperCase();
-                try {
-                    const res = await fetch(`${API_URL}?action=analyze&symbol=${symbol}&password=${encodeURIComponent(password.value)}`);
-                    const data = await res.json();
-                    if (data.status === 'success') recForm.analysis = data.analysis;
-                    else alert(`分析失敗: ${data.message}`);
-                } catch (e) { alert(`連線錯誤: ${e.message}`); } finally { isGeneratingAnalysis.value = false; }
-            };
-
-            const addRecommendation = () => {
-                if (!recForm.symbol || !recForm.price || !recForm.count) return alert('請填寫完整');
-                const sym = recForm.symbol.toUpperCase();
-                recommendations.value.push({ 
-                    id: Date.now(), 
-                    date: new Date().toISOString().split('T')[0], 
-                    type: recForm.type, 
-                    symbol: sym, 
-                    price: recForm.price, 
-                    count: recForm.count,
-                    analysis: recForm.analysis,
-                    showDetails: false
-                });
-                recForm.symbol = ''; recForm.price = ''; recForm.count = 1; recForm.analysis = ''; showRecForm = false;
-            };
-
-            const removeRecommendation = (id) => {
-                if(confirm('確定刪除此公告？(刪除後請記得按儲存)')) {
-                    recommendations.value = recommendations.value.filter(r => r.id !== id);
+                if(holdings[sym].shares > 0) holdings[sym].avgCost = holdings[sym].totalCost / holdings[sym].shares;
+            });
+            for(let s in holdings) {
+                if(holdings[s].shares > 0) {
+                    investedAmount += holdings[s].totalCost;
+                    holdings[s].currentPrice = currentPrices.value[s] || 0;
+                    holdings[s].unrealizedPnL = (holdings[s].currentPrice * holdings[s].shares) - holdings[s].totalCost;
+                    holdings[s].unrealizedPnLPercent = ((holdings[s].unrealizedPnL / holdings[s].totalCost) * 100).toFixed(2);
+                    totalUnrealized += holdings[s].unrealizedPnL;
                 }
-            };
+            }
+            return { cash, holdings, investedAmount, totalUnrealized, monthlyStats };
+        });
 
-            const dashboard = computed(() => {
-                let cash = 0, holdings = {}, totalRealizedPnL = 0, investedAmount = 0, monthlyStats = {};
-                cashAdjustments.value.forEach(adj => cash += adj.amount);
-                // 🔴 這裡需要跟 sortedTransactions 一樣的邏輯來計算 holdings
-                const sorted = [...transactions.value].sort((a,b) => new Date(a.date)-new Date(b.date));
-                sorted.forEach(t => {
-                    const sym = t.symbol.toUpperCase();
-                    if(!holdings[sym]) holdings[sym] = {shares:0, totalCost:0, avgCost:0};
-                    const amt = Number(t.price) * Number(t.shares);
-                    if(t.type.toLowerCase() === 'buy') {
-                        cash -= amt; 
-                        holdings[sym].totalCost += amt; 
-                        holdings[sym].shares += Number(t.shares);
-                        if(holdings[sym].shares > 0) holdings[sym].avgCost = holdings[sym].totalCost / holdings[sym].shares;
-                    } else {
-                        cash += amt; 
-                        const cost = holdings[sym].avgCost * Number(t.shares); 
-                        const pnl = amt - cost;
-                        totalRealizedPnL += pnl; 
-                        const m = t.date.substring(0,7);
-                        if(!monthlyStats[m]) monthlyStats[m] = {pnl:0}; 
-                        monthlyStats[m].pnl += pnl;
-                        holdings[sym].shares -= Number(t.shares); 
-                        holdings[sym].totalCost -= cost;
-                    }
-                });
-                for(let s in holdings) if(holdings[s].shares > 0) investedAmount += holdings[s].totalCost;
-                return { cash, holdings, totalRealizedPnL, investedAmount, monthlyStats: Object.keys(monthlyStats).sort().reverse().reduce((obj, key) => { obj[key] = monthlyStats[key]; return obj; }, {}) };
-            });
+        const sortedTransactions = computed(() => {
+            const h = {};
+            return [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(t => {
+                const sym = t.symbol.toUpperCase(); if(!h[sym]) h[sym] = {s:0, c:0, avg:0};
+                let pnl = 0; if(t.type==='buy'){ h[sym].c += t.price*t.shares; h[sym].s += t.shares; h[sym].avg = h[sym].c/h[sym].s; }
+                else { pnl = (t.price - h[sym].avg)*t.shares; h[sym].c -= h[sym].avg*t.shares; h[sym].s -= t.shares; }
+                return {...t, realizedPnL: pnl};
+            }).reverse();
+        });
 
-            // 🔴 關鍵修復：這裡補回了計算邏輯！
-            const sortedTransactions = computed(() => {
-                const chronological = [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date));
-                const tempHoldings = {};
-                const res = chronological.map(t => {
-                    const sym = t.symbol.toUpperCase();
-                    if(!tempHoldings[sym]) tempHoldings[sym] = {shares:0, totalCost:0, avgCost:0};
-                    
-                    let realizedPnL = 0; 
-                    const amt = Number(t.price) * Number(t.shares); // 轉型確保計算正確
-                    
-                    if(t.type.toLowerCase() === 'buy'){ // 大小寫相容
-                         tempHoldings[sym].totalCost += amt; 
-                         tempHoldings[sym].shares += Number(t.shares);
-                         if(tempHoldings[sym].shares > 0) tempHoldings[sym].avgCost = tempHoldings[sym].totalCost / tempHoldings[sym].shares;
-                    } else {
-                        const cost = tempHoldings[sym].avgCost * Number(t.shares); 
-                        realizedPnL = amt - cost;
-                        tempHoldings[sym].shares -= Number(t.shares); 
-                        tempHoldings[sym].totalCost -= cost;
-                    }
-                    return {...t, realizedPnL};
-                });
-                return res.sort((a,b)=>new Date(b.date)-new Date(a.date));
-            });
+        const addTransaction = () => { transactions.value.push({id:Date.now(), ...form}); form.symbol=''; form.price=''; form.shares=''; };
+        const removeTransaction = (id) => { transactions.value = transactions.value.filter(t=>t.id!==id); };
+        const addRecommendation = () => { recommendations.value.push({id:Date.now(), date:new Date().toISOString().split('T')[0], ...recForm, showDetails:false}); recForm.symbol=''; recForm.analysis=''; };
+        const removeRecommendation = (id) => { recommendations.value = recommendations.value.filter(r=>r.id!==id); };
+        const formatCurrency = (v, d=0) => (v||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
 
-            const sortedWatchlist = computed(() => [...watchlist.value].sort((a,b) => new Date(b.addedDate) - new Date(a.addedDate)));
-            const sortedRecommendations = computed(() => [...recommendations.value].sort((a,b) => new Date(b.date) - new Date(a.date)));
-
-            const addTransaction = () => { if(!form.symbol) return; transactions.value.push({ id:Date.now(), date:form.date, type:form.type, symbol:form.symbol.toUpperCase(), price:form.price, shares:form.shares }); form.symbol=''; form.price=''; form.shares=''; };
-            const removeTransaction = (id) => { if(confirm('刪除？')) transactions.value=transactions.value.filter(t=>t.id!==id); };
-            const addCashAdjustment = () => { cashAdjustments.value.push({id:Date.now(), date:cashForm.date, amount:cashForm.amount, note:cashForm.note}); showCashModal.value=false; };
-            const formatCurrency = (val, d=0) => (val||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
-            
-            return { API_URL, dashboard, form, cashForm, showCashModal, password, isLoading, transactions, cashAdjustments, watchlist, recommendations, sortedTransactions, sortedWatchlist, sortedRecommendations, fetchData, saveData, addTransaction, removeTransaction, addCashAdjustment, addWatchlist, removeWatchlist, addRecommendation, removeRecommendation, formatCurrency, resetPassword, showAIModal, aiLoading, selectedSymbol, aiContentParsed, openAIModal, newWatchSymbol, showBoard, showRecForm, recForm, marked, generateAnalysis, isGeneratingAnalysis };
-        }
-    }).mount('#app');
+        return { dashboard, form, recForm, transactions, recommendations, sortedTransactions, sortedRecommendations: computed(()=>[...recommendations.value].reverse()), fetchData, saveData, addTransaction, removeTransaction, addRecommendation, removeRecommendation, formatCurrency, isLoading, isGeneratingAnalysis, generateAnalysis, openAIModal, showAIModal, aiLoading, aiContent, selectedSymbol, marked, resetPassword:()=>{localStorage.clear();location.reload();} };
+    }
+}).mount('#app');
 </script>
 </body>
 </html>
