@@ -60,7 +60,7 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-1">
         <div>
             <h1 class="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2">
-                美股管理 <span class="text-[10px] md:text-xs bg-blue-600 text-white px-2 py-0.5 rounded font-bold">PRO v1.8</span>
+                美股管理 <span class="text-[10px] md:text-xs bg-blue-600 text-white px-2 py-0.5 rounded font-bold">PRO v1.9</span>
             </h1>
             <p v-if="isLoading" class="text-blue-500 text-[10px] md:text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">Fetching Live Data...</p>
         </div>
@@ -141,7 +141,7 @@
                 <h2 class="text-[10px] font-black mb-4 uppercase tracking-[0.2em] text-slate-400">Add Transaction</h2>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <input type="date" v-model="form.date" class="border-slate-200 rounded-xl p-3 text-sm outline-none focus:ring-2 focus:ring-blue-100 col-span-2 md:col-span-1">
-                    <select v-model="form.type" class="border-slate-200 rounded-xl p-3 text-sm font-black bg-white"><option value="buy">買入 Buy</option><option value="sell">賣出 Sell</option></select>
+                    <select v-model="form.type" class="border-slate-200 rounded-xl p-3 text-sm font-black bg-white appearance-none"><option value="buy">買入 Buy</option><option value="sell">賣出 Sell</option></select>
                     <input type="text" v-model="form.symbol" placeholder="代號" class="border-slate-200 rounded-xl p-3 text-sm uppercase font-black">
                     <input type="number" step="0.01" v-model.number="form.price" placeholder="單價" class="border-slate-200 rounded-xl p-3 text-sm font-mono">
                     <input type="number" v-model.number="form.shares" placeholder="股數" class="border-slate-200 rounded-xl p-3 text-sm font-mono">
@@ -151,8 +151,8 @@
 
             <div class="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
                 <div class="p-5 bg-slate-50 border-b flex justify-between items-center">
-                    <span class="font-black text-xs uppercase tracking-widest text-slate-500">歷史交易細節 (最近 14 筆可見)</span>
-                    <span class="text-[9px] font-bold text-slate-300">Scroll to view more</span>
+                    <span class="font-black text-xs uppercase tracking-widest text-slate-500">歷史交易細節 (最近 14 筆)</span>
+                    <span class="text-[9px] font-bold text-slate-300 italic">Scroll to explore history</span>
                 </div>
                 <div class="overflow-y-auto no-scrollbar max-h-[720px]">
                     <table class="w-full text-sm min-w-[500px] md:min-w-full">
@@ -204,31 +204,37 @@
             <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
                 <div class="p-5 bg-slate-900 text-white font-black text-xs uppercase tracking-widest">📢 AI 投資發布</div>
                 <div class="p-5 bg-slate-50/50 border-b space-y-3">
-                    <input v-model="recForm.symbol" placeholder="代號 (NVDA)" class="w-full border-slate-200 p-3 rounded-xl text-sm uppercase font-black outline-none focus:ring-2 focus:ring-blue-100">
+                    <input v-model="recForm.symbol" placeholder="代號" class="w-full border-slate-200 p-3 rounded-xl text-sm uppercase font-black outline-none focus:ring-1 focus:ring-blue-400">
                     <div class="flex gap-2">
                         <select v-model="recForm.type" class="w-1/2 border-slate-200 p-3 rounded-xl text-sm font-black bg-white appearance-none"><option value="Buy">買入</option><option value="Sell">賣出</option></select>
-                        <input v-model.number="recForm.price" step="0.01" type="number" placeholder="建議價" class="w-1/2 border-slate-200 p-3 rounded-xl text-sm font-mono">
+                        <input v-model.number="recForm.price" step="0.01" type="number" placeholder="價格" class="w-1/2 border-slate-200 p-3 rounded-xl text-sm font-mono">
                     </div>
+                    
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-slate-400 font-black uppercase">AI 參考數:</span>
+                        <input v-model.number="recForm.count" type="number" class="w-full border-slate-200 p-2 rounded-xl text-xs font-mono">
+                    </div>
+
                     <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="w-full py-2.5 bg-purple-50 text-purple-700 rounded-xl text-[10px] font-black border border-purple-100 uppercase tracking-widest">
                         {{ isGeneratingAnalysis ? 'AI 深度思考中...' : '✨ 生成當下 AI 觀點' }}
                     </button>
-                    <textarea v-model="recForm.analysis" placeholder="點擊按鈕自動生成，或手動填入..." rows="2" class="w-full border-slate-200 p-3 rounded-xl text-[10px] outline-none focus:ring-1 focus:ring-blue-400"></textarea>
+                    <textarea v-model="recForm.analysis" placeholder="觀點摘要..." rows="2" class="w-full border-slate-200 p-3 rounded-xl text-[10px] outline-none focus:ring-1 focus:ring-blue-400"></textarea>
                     <button @click="addRecommendation" class="w-full bg-blue-600 text-white py-3 rounded-xl font-black text-xs shadow-lg shadow-blue-100 transition">確認發布公告</button>
                 </div>
 
                 <div class="divide-y divide-slate-50 max-h-80 overflow-y-auto no-scrollbar">
                     <div v-for="r in sortedRecommendations" :key="r.id" class="p-4 relative group hover:bg-slate-50 transition">
-                        <button @click="removeRecommendation(r.id)" class="absolute top-4 right-4 text-slate-200 hover:text-red-500">×</button>
+                        <button @click="removeRecommendation(r.id)" class="absolute top-4 right-4 text-slate-200 hover:text-red-500 transition">×</button>
                         <p class="font-black text-slate-800 text-sm tracking-wide">{{ r.symbol }} <span class="text-[9px] text-slate-400 font-mono ml-1">{{ r.date }}</span></p>
                         
                         <div class="flex justify-between items-center mt-1">
                             <span class="text-[10px] font-bold" :class="r.type==='Buy'?'text-green-600':'text-red-600'">{{ r.type==='Buy'?'買入':'賣出' }} @ ${{ r.price }}</span>
-                            <span class="text-[9px] bg-slate-100 px-1.5 rounded-full text-slate-500">AI: {{ r.count }}</span>
+                            <span class="text-[9px] bg-orange-100 px-1.5 rounded-full text-orange-700 font-bold">AI: {{ r.count }}</span>
                         </div>
 
                         <div v-if="r.analysis && r.analysis.trim() !== ''" class="mt-2">
-                            <button @click="r.showDetails = !r.showDetails" class="text-[9px] text-blue-500 font-black tracking-tighter flex items-center gap-1">
-                                {{ r.showDetails ? '隱藏內容' : '查看 AI 深度觀點' }} 
+                            <button @click="r.showDetails = !r.showDetails" class="text-[9px] text-blue-500 font-black tracking-tighter flex items-center gap-1 hover:underline transition">
+                                {{ r.showDetails ? '隱藏分析內容' : '查看 AI 深度觀點' }} 
                                 <span>{{ r.showDetails ? '▲' : '▼' }}</span>
                             </button>
                             <div v-if="r.showDetails" class="mt-2 text-[10px] bg-slate-100/50 p-3 rounded-xl leading-relaxed markdown-content text-slate-600 shadow-inner" v-html="marked.parse(r.analysis)"></div>
@@ -241,9 +247,9 @@
 
     <div v-if="showAIModal" class="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-2 z-[60]">
         <div class="bg-white rounded-[2.5rem] w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
-            <div class="p-6 bg-slate-900 text-white flex justify-between items-center font-black">
+            <div class="p-6 bg-slate-900 text-white flex justify-between items-center font-black border-b border-white/10">
                 <span class="text-sm uppercase tracking-widest">🤖 Stock Analysis Terminal</span>
-                <button @click="showAIModal=false" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full">&times;</button>
+                <button @click="showAIModal=false" class="w-10 h-10 flex items-center justify-center bg-white/10 rounded-full active:bg-white/20">&times;</button>
             </div>
             <div class="p-6 overflow-y-auto flex-1 no-scrollbar bg-white">
                 <div v-if="aiLoading" class="flex flex-col items-center py-20">
@@ -295,6 +301,7 @@ createApp({
         const aiContent = ref('');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
+        // 🟢 recForm 初始化 count 為 1
         const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '' });
 
         onMounted(() => { if (password.value) fetchData(); });
@@ -377,8 +384,20 @@ createApp({
         const removeTransaction = (id) => { if(confirm('刪除此筆交易？')) transactions.value = transactions.value.filter(t=>t.id!==id); };
         const addCashAdjustment = () => { if(!cashForm.amount) return; cashAdjustments.value.push({id:Date.now(), ...cashForm}); showCashModal.value=false; cashForm.amount=''; cashForm.note=''; };
         const removeCash = (id) => { if(confirm('刪除此現金紀錄？')) cashAdjustments.value = cashAdjustments.value.filter(c=>c.id!==id); };
-        const addRecommendation = () => { if(!recForm.symbol) return; recommendations.value.push({id:Date.now(), date:new Date().toISOString().split('T')[0], ...recForm, symbol:recForm.symbol.toUpperCase(), showDetails:false}); recForm.symbol=''; recForm.analysis=''; };
-        const removeRecommendation = (id) => { recommendations.value = recommendations.value.filter(r=>r.id!==id); };
+        
+        // 🟢 addRecommendation 包含 count
+        const addRecommendation = () => { 
+            if(!recForm.symbol) return; 
+            recommendations.value.push({
+                id:Date.now(), 
+                date:new Date().toISOString().split('T')[0], 
+                ...recForm, 
+                symbol:recForm.symbol.toUpperCase(), 
+                showDetails:false
+            }); 
+            recForm.symbol=''; recForm.analysis=''; recForm.count=1; 
+        };
+        const removeRecommendation = (id) => { if(confirm('確定刪除此公告？')) recommendations.value = recommendations.value.filter(r=>r.id!==id); };
         
         const generateAnalysis = async () => {
             if (!recForm.symbol) return alert('請輸入代號'); isGeneratingAnalysis.value = true;
@@ -393,7 +412,7 @@ createApp({
             try {
                 const r = await fetch(`${API_URL}?action=analyze&symbol=${s}&password=${password.value}`);
                 const d = await r.json(); aiContent.value = d.analysis;
-            } catch(e) { aiContent.value = '讀取失敗'; } finally { aiLoading.value = false; }
+            } catch (e) { aiContent.value = '讀取失敗'; } finally { aiLoading.value = false; }
         };
 
         const formatCurrency = (v, d=0) => (v||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
