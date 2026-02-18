@@ -104,7 +104,10 @@
                                 <td class="p-3"><span :class="t.type==='buy'?'bg-blue-50 text-blue-700':'bg-amber-50 text-amber-700'" class="px-2 py-0.5 rounded text-xs border uppercase">{{ t.type }}</span></td>
                                 <td class="p-3 text-right">${{ formatCurrency(t.price) }}</td>
                                 <td class="p-3 text-right">{{ t.shares }}</td>
-                                <td class="p-3 text-right font-bold"><span v-if="t.type==='sell'" :class="t.realizedPnL>=0?'text-up':'text-down'">{{ t.realizedPnL>=0?'+':'' }}${{ formatCurrency(t.realizedPnL, 0) }}</span><span v-else class="text-slate-300">-</span></td>
+                                <td class="p-3 text-right font-bold">
+                                    <span v-if="t.type==='sell'" :class="t.realizedPnL>=0?'text-up':'text-down'">{{ t.realizedPnL>=0?'+':'' }}${{ formatCurrency(t.realizedPnL, 0) }}</span>
+                                    <span v-else class="text-slate-300">-</span>
+                                </td>
                                 <td class="p-3 text-center"><button @click="removeTransaction(t.id)" class="text-slate-300 hover:text-red-500 font-bold">×</button></td>
                             </tr>
                         </tbody>
@@ -135,7 +138,7 @@
                 <div class="overflow-y-auto flex-1">
                     <div v-for="rec in sortedRecommendations" :key="rec.id" class="p-3 border-b border-slate-100 hover:bg-slate-50 text-sm relative group">
                         
-                        <button @click="removeRecommendation(rec.id)" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold px-2" title="刪除此公告">×</button>
+                        <button @click="removeRecommendation(rec.id)" class="absolute top-2 right-2 text-slate-300 hover:text-red-500 font-bold px-2" title="刪除">×</button>
 
                         <div class="flex justify-between items-center mb-1 pr-6">
                             <span class="font-bold text-slate-800 text-base">{{ rec.symbol }}</span>
@@ -354,26 +357,59 @@
             const dashboard = computed(() => {
                 let cash = 0, holdings = {}, totalRealizedPnL = 0, investedAmount = 0, monthlyStats = {};
                 cashAdjustments.value.forEach(adj => cash += adj.amount);
+                // 🔴 這裡需要跟 sortedTransactions 一樣的邏輯來計算 holdings
                 const sorted = [...transactions.value].sort((a,b) => new Date(a.date)-new Date(b.date));
                 sorted.forEach(t => {
                     const sym = t.symbol.toUpperCase();
                     if(!holdings[sym]) holdings[sym] = {shares:0, totalCost:0, avgCost:0};
-                    const amt = t.price * t.shares;
-                    if(t.type === 'buy') {
-                        cash -= amt; holdings[sym].totalCost += amt; holdings[sym].shares += t.shares;
+                    const amt = Number(t.price) * Number(t.shares);
+                    if(t.type.toLowerCase() === 'buy') {
+                        cash -= amt; 
+                        holdings[sym].totalCost += amt; 
+                        holdings[sym].shares += Number(t.shares);
                         if(holdings[sym].shares > 0) holdings[sym].avgCost = holdings[sym].totalCost / holdings[sym].shares;
                     } else {
-                        cash += amt; const cost = holdings[sym].avgCost * t.shares; const pnl = amt - cost;
-                        totalRealizedPnL += pnl; const m = t.date.substring(0,7);
-                        if(!monthlyStats[m]) monthlyStats[m] = {pnl:0}; monthlyStats[m].pnl += pnl;
-                        holdings[sym].shares -= t.shares; holdings[sym].totalCost -= cost;
+                        cash += amt; 
+                        const cost = holdings[sym].avgCost * Number(t.shares); 
+                        const pnl = amt - cost;
+                        totalRealizedPnL += pnl; 
+                        const m = t.date.substring(0,7);
+                        if(!monthlyStats[m]) monthlyStats[m] = {pnl:0}; 
+                        monthlyStats[m].pnl += pnl;
+                        holdings[sym].shares -= Number(t.shares); 
+                        holdings[sym].totalCost -= cost;
                     }
                 });
                 for(let s in holdings) if(holdings[s].shares > 0) investedAmount += holdings[s].totalCost;
                 return { cash, holdings, totalRealizedPnL, investedAmount, monthlyStats: Object.keys(monthlyStats).sort().reverse().reduce((obj, key) => { obj[key] = monthlyStats[key]; return obj; }, {}) };
             });
 
-            const sortedTransactions = computed(() => [...transactions.value].sort((a,b)=>new Date(b.date)-new Date(a.date)));
+            // 🔴 關鍵修復：這裡補回了計算邏輯！
+            const sortedTransactions = computed(() => {
+                const chronological = [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date));
+                const tempHoldings = {};
+                const res = chronological.map(t => {
+                    const sym = t.symbol.toUpperCase();
+                    if(!tempHoldings[sym]) tempHoldings[sym] = {shares:0, totalCost:0, avgCost:0};
+                    
+                    let realizedPnL = 0; 
+                    const amt = Number(t.price) * Number(t.shares); // 轉型確保計算正確
+                    
+                    if(t.type.toLowerCase() === 'buy'){ // 大小寫相容
+                         tempHoldings[sym].totalCost += amt; 
+                         tempHoldings[sym].shares += Number(t.shares);
+                         if(tempHoldings[sym].shares > 0) tempHoldings[sym].avgCost = tempHoldings[sym].totalCost / tempHoldings[sym].shares;
+                    } else {
+                        const cost = tempHoldings[sym].avgCost * Number(t.shares); 
+                        realizedPnL = amt - cost;
+                        tempHoldings[sym].shares -= Number(t.shares); 
+                        tempHoldings[sym].totalCost -= cost;
+                    }
+                    return {...t, realizedPnL};
+                });
+                return res.sort((a,b)=>new Date(b.date)-new Date(a.date));
+            });
+
             const sortedWatchlist = computed(() => [...watchlist.value].sort((a,b) => new Date(b.addedDate) - new Date(a.addedDate)));
             const sortedRecommendations = computed(() => [...recommendations.value].sort((a,b) => new Date(b.date) - new Date(a.date)));
 
