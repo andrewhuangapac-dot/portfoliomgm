@@ -60,9 +60,9 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-1">
         <div>
             <h1 class="text-xl md:text-2xl font-black tracking-tight flex items-center gap-2">
-                美股管理 <span class="text-[10px] md:text-xs bg-blue-600 text-white px-2 py-0.5 rounded font-bold">PRO v1.9</span>
+                美股管理 <span class="text-[10px] md:text-xs bg-blue-600 text-white px-2 py-0.5 rounded font-bold">PRO v1.10</span>
             </h1>
-            <p v-if="isLoading" class="text-blue-500 text-[10px] md:text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">Fetching Live Data...</p>
+            <p v-if="isLoading" class="text-blue-500 text-[10px] md:text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">Syncing Cloud Data...</p>
         </div>
         <div class="flex w-full md:w-auto gap-2">
             <button @click="fetchData" class="flex-1 md:flex-none px-5 py-2.5 bg-white border border-slate-200 rounded-2xl shadow-sm text-sm font-bold hover:bg-slate-50 transition">🔄 同步</button>
@@ -106,15 +106,15 @@
             
             <div class="bg-white rounded-[2rem] border border-slate-100 overflow-hidden shadow-sm">
                 <div class="p-5 bg-slate-50 border-b font-black text-xs uppercase tracking-widest text-slate-500">當前持倉 (Positions)</div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm min-w-[600px] md:min-w-full">
+                <div class="overflow-x-auto no-scrollbar">
+                    <table class="w-full text-sm min-w-[700px] md:min-w-full">
                         <thead class="bg-slate-50 text-slate-400 text-[10px] uppercase font-bold">
                             <tr>
                                 <th class="p-4 text-left">標的</th>
                                 <th class="p-4 text-right">股數</th>
                                 <th class="p-4 text-right text-blue-600">現價</th>
                                 <th class="p-4 text-right">均價</th>
-                                <th class="p-4 text-right">未實現損益</th>
+                                <th class="p-4 text-right">總成本</th> <th class="p-4 text-right">未實現損益</th>
                                 <th class="p-4 text-center">AI</th>
                             </tr>
                         </thead>
@@ -124,7 +124,7 @@
                                 <td class="p-4 text-right font-medium">{{ h.shares }}</td>
                                 <td class="p-4 text-right font-black text-blue-600 font-mono">${{ formatCurrency(h.currentPrice, 2) }}</td>
                                 <td class="p-4 text-right text-slate-400 font-mono">${{ formatCurrency(h.avgCost, 2) }}</td>
-                                <td class="p-4 text-right font-black" :class="h.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">
+                                <td class="p-4 text-right text-slate-400 font-mono">${{ formatCurrency(h.totalCost, 0) }}</td> <td class="p-4 text-right font-black" :class="h.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">
                                     <span class="font-mono">${{ formatCurrency(h.unrealizedPnL, 0) }}</span>
                                     <span class="text-[9px] block opacity-70">{{ h.unrealizedPnLPercent }}%</span>
                                 </td>
@@ -204,10 +204,10 @@
             <div class="bg-white rounded-[2rem] shadow-2xl shadow-slate-200 border border-slate-100 overflow-hidden">
                 <div class="p-5 bg-slate-900 text-white font-black text-xs uppercase tracking-widest">📢 AI 投資發布</div>
                 <div class="p-5 bg-slate-50/50 border-b space-y-3">
-                    <input v-model="recForm.symbol" placeholder="代號" class="w-full border-slate-200 p-3 rounded-xl text-sm uppercase font-black outline-none focus:ring-1 focus:ring-blue-400">
+                    <input v-model="recForm.symbol" placeholder="代號 (NVDA)" class="w-full border-slate-200 p-3 rounded-xl text-sm uppercase font-black outline-none focus:ring-2 focus:ring-blue-100">
                     <div class="flex gap-2">
                         <select v-model="recForm.type" class="w-1/2 border-slate-200 p-3 rounded-xl text-sm font-black bg-white appearance-none"><option value="Buy">買入</option><option value="Sell">賣出</option></select>
-                        <input v-model.number="recForm.price" step="0.01" type="number" placeholder="價格" class="w-1/2 border-slate-200 p-3 rounded-xl text-sm font-mono">
+                        <input v-model.number="recForm.price" step="0.01" type="number" placeholder="建議價" class="w-1/2 border-slate-200 p-3 rounded-xl text-sm font-mono">
                     </div>
                     
                     <div class="flex items-center gap-2">
@@ -301,7 +301,6 @@ createApp({
         const aiContent = ref('');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
-        // 🟢 recForm 初始化 count 為 1
         const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '' });
 
         onMounted(() => { if (password.value) fetchData(); });
@@ -385,7 +384,6 @@ createApp({
         const addCashAdjustment = () => { if(!cashForm.amount) return; cashAdjustments.value.push({id:Date.now(), ...cashForm}); showCashModal.value=false; cashForm.amount=''; cashForm.note=''; };
         const removeCash = (id) => { if(confirm('刪除此現金紀錄？')) cashAdjustments.value = cashAdjustments.value.filter(c=>c.id!==id); };
         
-        // 🟢 addRecommendation 包含 count
         const addRecommendation = () => { 
             if(!recForm.symbol) return; 
             recommendations.value.push({
