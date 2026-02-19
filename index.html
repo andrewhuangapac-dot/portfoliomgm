@@ -34,7 +34,7 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-1">
         <div>
             <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
-                Quantum Terminal <span class="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded font-bold">v3.2</span>
+                Quantum Terminal <span class="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded font-bold">v3.3</span>
             </h1>
             <p v-if="isSyncing" class="text-blue-500 text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">🔄 Syncing Backend...</p>
             <p v-else class="text-green-500 dark:text-green-400 text-xs mt-1 font-bold tracking-widest uppercase">✓ System Online</p>
@@ -47,7 +47,7 @@
         </div>
     </header>
 
-    <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6">
+    <div class="grid grid-cols-2 md:grid-cols-7 gap-3 mb-6">
         <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
             <p class="text-[10px] text-slate-400 font-black uppercase">可用現金</p>
             <p class="text-lg md:text-xl font-black mt-1">${{ formatCurrency(dashboard.cash) }} <span @click="showCashModal=true" class="text-[10px] text-blue-500 cursor-pointer underline ml-1">調節</span></p>
@@ -56,6 +56,12 @@
             <p class="text-[10px] text-slate-400 font-black uppercase">持倉總成本</p>
             <p class="text-lg md:text-xl font-black mt-1">${{ formatCurrency(dashboard.investedAmount) }}</p>
         </div>
+        
+        <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
+            <p class="text-[10px] text-slate-400 font-black uppercase">已實現損益</p>
+            <p class="text-lg md:text-xl font-black mt-1" :class="dashboard.totalRealized >= 0 ? 'text-up' : 'text-down'">{{ dashboard.totalRealized >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalRealized) }}</p>
+        </div>
+
         <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl border border-slate-100 dark:border-slate-700 shadow-sm">
             <p class="text-[10px] text-slate-400 font-black uppercase">未實現損益</p>
             <p class="text-lg md:text-xl font-black mt-1" :class="dashboard.totalUnrealized >= 0 ? 'text-up' : 'text-down'">{{ dashboard.totalUnrealized >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalUnrealized) }}</p>
@@ -187,21 +193,6 @@
                     </button>
                     <textarea v-model="recForm.analysis" rows="2" placeholder="分析內容..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-[10px] outline-none"></textarea>
                     
-                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 mt-3">
-                        <span class="text-[10px] font-black text-slate-400 uppercase block mb-2">同步警報推播 (Alert Push)</span>
-                        <div class="flex items-center gap-4 flex-wrap">
-                            <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-                                <input type="checkbox" v-model="recForm.pushLine" class="w-4 h-4 rounded text-green-500"> Line
-                            </label>
-                            <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-                                <input type="checkbox" v-model="recForm.pushWhatsApp" class="w-4 h-4 rounded text-emerald-500"> WhatsApp
-                            </label>
-                            <label class="flex items-center gap-1.5 text-[11px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-                                <input type="checkbox" v-model="recForm.pushWeChat" class="w-4 h-4 rounded text-green-500"> WeChat
-                            </label>
-                        </div>
-                    </div>
-
                     <button @click="addRecommendation" class="w-full mt-2 bg-blue-600 text-white py-3 rounded-xl font-black text-xs shadow-lg shadow-blue-500/30">確認發布</button>
                 </div>
                 
@@ -269,9 +260,8 @@ createApp({
         const isSyncing = ref(false); const password = ref(localStorage.getItem('p_pass') || '');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         
-        const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '', pushLine: false, pushWhatsApp: false, pushWeChat: false });
-        let pushFlagsTemp = { line: false, whatsapp: false, wechat: false };
-        let newlyAddedRec = null; 
+        // 已移除推播相關變數
+        const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '' });
 
         const searchQuery = ref(''); const showCashModal = ref(false); const showAIModal = ref(false); 
         const aiLoading = ref(false); const selectedSymbol = ref(''); const aiContent = ref('');
@@ -315,6 +305,7 @@ createApp({
             } catch (e) { if(forceAlert) alert(`同步失敗: ${e.message}`); } finally { isSyncing.value = false; }
         };
 
+        // 已移除推播相關參數傳遞
         const saveData = async () => {
             if (!checkPassword()) return;
             if (!confirm('確認儲存並記錄當前淨值嗎？')) return;
@@ -322,16 +313,12 @@ createApp({
                 const cleanRecs = recommendations.value.map(({showDetails, ...rest}) => rest);
                 const payload = { 
                     transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: cleanRecs,
-                    currentNav: dashboard.value.totalNav,
-                    pushFlags: pushFlagsTemp, 
-                    newRecommendation: newlyAddedRec
+                    currentNav: dashboard.value.totalNav
                 };
                 const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, { method: 'POST', body: JSON.stringify(payload) });
                 const d = await res.json();
                 if(d.status === 'error') throw new Error(d.message);
                 
-                newlyAddedRec = null; 
-                pushFlagsTemp = { line: false, whatsapp: false, wechat: false };
                 alert('儲存與淨值快照記錄成功！'); fetchData(false);
             } catch(e) { alert(`儲存失敗: ${e.message}`); }
         };
@@ -362,7 +349,6 @@ createApp({
             return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalDividend, totalNav: cash + investedAmount + totalUnrealized };
         });
 
-        // 🟢 徹底修復：補回 sortedTransactions 實現損益計算邏輯
         const sortedTransactions = computed(() => {
             const h = {};
             return [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(t => {
@@ -448,16 +434,13 @@ createApp({
             } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; }
         };
 
+        // 已移除推播邏輯
         const addRecommendation = () => { 
             if(!recForm.symbol) return; 
             const newRec = { id:Date.now(), date:new Date().toISOString().split('T')[0], symbol:recForm.symbol.toUpperCase(), type:recForm.type, price:recForm.price, count:recForm.count, analysis:recForm.analysis };
             recommendations.value.push({...newRec, showDetails:false}); 
             
-            if (recForm.pushLine || recForm.pushWhatsApp || recForm.pushWeChat) { 
-                newlyAddedRec = { ...newRec }; 
-                pushFlagsTemp = { line: recForm.pushLine, whatsapp: recForm.pushWhatsApp, wechat: recForm.pushWeChat };
-            }
-            recForm.symbol=''; recForm.analysis=''; recForm.count=1; recForm.pushLine=false; recForm.pushWhatsApp=false; recForm.pushWeChat=false;
+            recForm.symbol=''; recForm.analysis=''; recForm.count=1; 
         };
         
         const filteredTransactions = computed(() => { if(!searchQuery.value) return sortedTransactions.value; return sortedTransactions.value.filter(t => t.symbol.includes(searchQuery.value.toUpperCase())); });
@@ -468,7 +451,6 @@ createApp({
         const removeRecommendation = (id) => { if(confirm('刪除公告？')) recommendations.value = recommendations.value.filter(r=>r.id!==id); };
         const formatCurrency = (v, d=0) => (v||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
         
-        // 確保 monthlyStats 讀取 sortedTransactions
         const monthlyStats = computed(() => { const s = {}; sortedTransactions.value.forEach(t => { if(t.type.toLowerCase()==='sell' && t.realizedPnL) { const m = t.date.substring(0,7); s[m] = (s[m]||0) + t.realizedPnL; } }); return Object.keys(s).sort().reverse().map(m => ({ month: m, pnl: s[m] })); });
 
         return { 
