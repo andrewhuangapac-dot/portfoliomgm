@@ -34,7 +34,7 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-1">
         <div>
             <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
-                Quantum Terminal <span class="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded font-bold">v3.1</span>
+                Quantum Terminal <span class="text-[10px] bg-indigo-600 text-white px-2 py-0.5 rounded font-bold">v3.2</span>
             </h1>
             <p v-if="isSyncing" class="text-blue-500 text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">🔄 Syncing Backend...</p>
             <p v-else class="text-green-500 dark:text-green-400 text-xs mt-1 font-bold tracking-widest uppercase">✓ System Online</p>
@@ -269,7 +269,6 @@ createApp({
         const isSyncing = ref(false); const password = ref(localStorage.getItem('p_pass') || '');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         
-        // v3.1 加入三種推播選項
         const recForm = reactive({ symbol: '', type: 'Buy', price: '', count: 1, analysis: '', pushLine: false, pushWhatsApp: false, pushWeChat: false });
         let pushFlagsTemp = { line: false, whatsapp: false, wechat: false };
         let newlyAddedRec = null; 
@@ -363,6 +362,25 @@ createApp({
             return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalDividend, totalNav: cash + investedAmount + totalUnrealized };
         });
 
+        // 🟢 徹底修復：補回 sortedTransactions 實現損益計算邏輯
+        const sortedTransactions = computed(() => {
+            const h = {};
+            return [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(t => {
+                const sym = t.symbol.toUpperCase(); if(!h[sym]) h[sym] = {s:0, c:0, avg:0};
+                let pnl = 0; 
+                if(t.type.toLowerCase()==='buy'){ 
+                    h[sym].c += Number(t.price)*Number(t.shares); 
+                    h[sym].s += Number(t.shares); 
+                    h[sym].avg = h[sym].c/h[sym].s; 
+                } else { 
+                    pnl = (Number(t.price) - h[sym].avg)*Number(t.shares); 
+                    h[sym].c -= h[sym].avg*Number(t.shares); 
+                    h[sym].s -= Number(t.shares); 
+                }
+                return {...t, realizedPnL: pnl};
+            }).reverse();
+        });
+
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
             const isDark = document.documentElement.classList.contains('dark');
@@ -442,7 +460,6 @@ createApp({
             recForm.symbol=''; recForm.analysis=''; recForm.count=1; recForm.pushLine=false; recForm.pushWhatsApp=false; recForm.pushWeChat=false;
         };
         
-        const sortedTransactions = computed(() => { return [...transactions.value].sort((a,b)=>new Date(b.date)-new Date(a.date)); });
         const filteredTransactions = computed(() => { if(!searchQuery.value) return sortedTransactions.value; return sortedTransactions.value.filter(t => t.symbol.includes(searchQuery.value.toUpperCase())); });
         const exportCSV = () => { const header = "\uFEFFDate,Symbol,Type,Price,Shares\n"; const rows = sortedTransactions.value.map(t => `${t.date},${t.symbol},${t.type},${t.price},${t.shares}`).join("\n"); const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([header + rows], { type: 'text/csv;charset=utf-8;' })); link.download = "trading_history.csv"; link.click(); };
         const addTransaction = () => { if(!form.symbol) return; transactions.value.push({id:Date.now(), ...form, symbol: form.symbol.toUpperCase()}); form.symbol=''; form.price=''; form.shares=''; };
@@ -450,6 +467,8 @@ createApp({
         const addCashAdjustment = () => { if(!cashForm.amount) return; cashAdjustments.value.push({id:Date.now(), ...cashForm}); showCashModal.value=false; cashForm.amount=''; cashForm.note=''; };
         const removeRecommendation = (id) => { if(confirm('刪除公告？')) recommendations.value = recommendations.value.filter(r=>r.id!==id); };
         const formatCurrency = (v, d=0) => (v||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
+        
+        // 確保 monthlyStats 讀取 sortedTransactions
         const monthlyStats = computed(() => { const s = {}; sortedTransactions.value.forEach(t => { if(t.type.toLowerCase()==='sell' && t.realizedPnL) { const m = t.date.substring(0,7); s[m] = (s[m]||0) + t.realizedPnL; } }); return Object.keys(s).sort().reverse().map(m => ({ month: m, pnl: s[m] })); });
 
         return { 
