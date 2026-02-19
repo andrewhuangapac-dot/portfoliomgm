@@ -19,7 +19,7 @@
         button:active { transform: scale(0.97); opacity: 0.8; }
         @media (min-width: 1024px) { .app-container { max-width: 1200px; margin: 0 auto; } }
 
-        /* 🟢 優化 Markdown 解析後的排版 (適應亮/暗色模式) */
+        /* Markdown 排版 (適應亮/暗色模式) */
         .markdown-content { font-size: 14px; line-height: 1.7; }
         .markdown-content p { margin-bottom: 12px; }
         .markdown-content h1, .markdown-content h2, .markdown-content h3 { font-weight: 900; margin-top: 16px; margin-bottom: 8px; color: #0f172a; }
@@ -81,15 +81,21 @@
                     <div class="relative w-40 h-40"><canvas id="allocationChart"></canvas></div>
                 </div>
                 <div class="overflow-x-auto no-scrollbar w-full md:w-2/3">
-                    <table class="w-full text-sm min-w-[500px]">
+                    <table class="w-full text-sm min-w-[600px]">
                         <thead class="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px] uppercase font-bold">
                             <tr>
-                                <th class="p-4 text-left">標的</th><th class="p-4 text-right">現價 / 日漲跌</th><th class="p-4 text-right">總成本</th><th class="p-4 text-right">未實現損益</th><th class="p-4 text-center">AI</th>
+                                <th class="p-4 text-left">標的</th>
+                                <th class="p-4 text-right">均價</th>
+                                <th class="p-4 text-right">現價 / 日漲跌</th>
+                                <th class="p-4 text-right">總成本</th>
+                                <th class="p-4 text-right">未實現損益</th>
+                                <th class="p-4 text-center">AI</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
                             <tr v-for="(h, sym) in dashboard.holdings" :key="sym" v-show="h.shares > 0" class="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
                                 <td class="p-4 font-black">{{ sym }} <span class="block text-[10px] font-normal text-slate-400">{{ h.shares }} 股</span></td>
+                                <td class="p-4 text-right font-mono text-slate-500 dark:text-slate-400">${{ formatCurrency(h.avgCost, 2) }}</td>
                                 <td class="p-4 text-right font-mono text-blue-500 dark:text-blue-400">
                                     ${{ formatCurrency(h.currentPrice, 2) }}
                                     <span class="block text-[10px]" :class="h.dayChange >= 0 ? 'text-up' : 'text-down'">{{ h.dayChange >= 0 ? '▲' : '▼' }}{{ h.dayChange }}%</span>
@@ -109,7 +115,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
                     <input type="date" v-model="form.date" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm col-span-2 md:col-span-1 outline-none">
                     <select v-model="form.type" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-black outline-none"><option value="buy">買入 Buy</option><option value="sell">賣出 Sell</option></select>
-                    <input type="text" v-model="form.symbol" placeholder="代號" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm uppercase font-black outline-none">
+                    <input type="text" v-model="form.symbol" placeholder="代號 (AAPL)" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm uppercase font-black outline-none">
                     <input type="number" step="0.01" v-model.number="form.price" placeholder="價格" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-mono outline-none">
                     <input type="number" v-model.number="form.shares" placeholder="股數" class="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm font-mono outline-none">
                     <button @click="addTransaction" class="col-span-2 md:col-span-5 bg-blue-600 text-white p-3.5 rounded-2xl font-black hover:bg-blue-700 shadow-lg shadow-blue-500/30 transition">新增交易紀錄</button>
@@ -272,7 +278,6 @@ createApp({
             return true;
         };
 
-        // 🟢 修復：加強 JSON 解析與錯誤攔截
         const fetchData = async (forceAlert = false) => {
             if (!checkPassword()) return;
             isSyncing.value = true;
@@ -309,7 +314,6 @@ createApp({
             } catch(e) { alert(`儲存失敗: ${e.message}`); }
         };
 
-        // 🟢 徹底修復 AI 觀點生成邏輯
         const generateAnalysis = async () => {
             if (!recForm.symbol) return alert('請先輸入代號！');
             if (!checkPassword()) return;
@@ -326,7 +330,6 @@ createApp({
             }
         };
 
-        // 🟢 徹底修復 AI 彈窗解讀邏輯
         const openAIModal = async (s) => { 
             selectedSymbol.value = s; 
             showAIModal.value = true; 
