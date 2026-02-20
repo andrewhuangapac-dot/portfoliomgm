@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>美股量化投資管理 v1.1</title>
+    <title>美股量化投資管理</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -32,10 +32,10 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-1">
         <div>
             <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
-                Quant Terminal <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black tracking-widest">v1.1 STRICT</span>
+                Quant Terminal <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black tracking-widest">v STABLE</span>
             </h1>
             <p v-if="isSyncing" class="text-blue-500 text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">🔄 Syncing Backend...</p>
-            <p v-else class="text-green-500 dark:text-green-400 text-xs mt-1 font-bold tracking-widest uppercase">AI Engine Active</p>
+            <p v-else class="text-green-500 dark:text-green-400 text-xs mt-1 font-bold tracking-widest uppercase">✓AI Engine Active</p>
         </div>
         <div class="flex w-full md:w-auto gap-2 flex-wrap">
             <button @click="reviewPortfolio" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-black shadow-lg flex items-center gap-1">
@@ -95,7 +95,7 @@
                 <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <span class="font-black text-xs uppercase text-slate-500">💼 四大支柱量化雷達 (4-Pillars Risk Radar)</span>
                     <button @click="scanAllQuantRisk" :disabled="isScanningAll" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-lg transition flex items-center gap-2">
-                        <span v-if="isScanningAll" class="animate-pulse">⏳ 掃描分析中...</span>
+                        <span v-if="isScanningAll" class="animate-pulse">⏳ 批次掃描分析中...</span>
                         <span v-else>🚀 執行全持倉量化掃描 (限 SG 06-08 / 20-22)</span>
                     </button>
                 </div>
@@ -288,7 +288,7 @@
         </button>
     </div>
     
-    <div v-if="showAIModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 z-[60] transition-opacity"><div class="bg-white dark:bg-slate-800 rounded-[2.5rem] w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200 dark:border-slate-700"><div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-900 text-white flex justify-between items-center font-black"><span class="text-sm uppercase tracking-widest flex items-center gap-2">🧠 Quantum Analysis <span class="text-[10px] bg-white/20 px-2 rounded">{{ selectedSymbol }}</span></span><button @click="showAIModal=false" class="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition">&times;</button></div><div class="p-6 overflow-y-auto flex-1 no-scrollbar bg-slate-50 dark:bg-slate-800"><div v-if="aiLoading" class="flex flex-col items-center py-20"><div class="loader mb-4 border-t-indigo-500 border-4 w-12 h-12"></div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic animate-pulse">Deep Thinking in Progress...</p></div><div v-else class="text-slate-700 dark:text-slate-300 markdown-content" v-html="marked.parse(aiContent || '')"></div></div></div></div>
+    <div v-if="showAIModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 z-[60] transition-opacity"><div class="bg-white dark:bg-slate-800 rounded-[2.5rem] w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl border border-slate-200 dark:border-slate-700"><div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-900 text-white flex justify-between items-center font-black"><span class="text-sm uppercase tracking-widest flex items-center gap-2">🛡️ Quantum Analysis <span class="text-[10px] bg-white/20 px-2 rounded">{{ selectedSymbol }}</span></span><button @click="showAIModal=false" class="w-8 h-8 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full transition">&times;</button></div><div class="p-6 overflow-y-auto flex-1 no-scrollbar bg-slate-50 dark:bg-slate-800"><div v-if="aiLoading" class="flex flex-col items-center py-20"><div class="loader mb-4 border-t-indigo-500 border-4 w-12 h-12"></div><p class="text-[10px] font-black text-slate-400 uppercase tracking-widest italic animate-pulse">Deep Thinking in Progress...</p></div><div v-else class="text-slate-700 dark:text-slate-300 markdown-content" v-html="marked.parse(aiContent || '')"></div></div></div></div>
     <div v-if="showCashModal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4"><div class="bg-white dark:bg-slate-800 p-6 rounded-3xl w-full max-w-xs shadow-2xl border border-slate-100 dark:border-slate-700"><h3 class="font-black mb-4 uppercase text-xs border-b dark:border-slate-700 pb-2">Cash Adjustment</h3><div class="space-y-4"><input type="date" v-model="cashForm.date" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm outline-none"><input type="number" v-model.number="cashForm.amount" placeholder="金額 (負數為扣款)" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none"><input type="text" v-model="cashForm.note" placeholder="備註" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-black outline-none"><div class="flex gap-2 pt-2"><button @click="addCashAdjustment" class="flex-1 bg-blue-600 text-white py-3 rounded-xl font-black text-xs">確認</button><button @click="showCashModal=false" class="flex-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-3 rounded-xl font-black text-xs">取消</button></div></div></div></div>
 </div>
 
@@ -308,8 +308,6 @@ createApp({
         const searchQuery = ref(''); const showCashModal = ref(false); const showAIModal = ref(false); 
         const aiLoading = ref(false); const selectedSymbol = ref(''); const aiContent = ref('');
         const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
-        
-        // ✨ AI 狀態變數加回
         const isGeneratingAnalysis = ref(false);
 
         const showCopilot = ref(false); const chatInput = ref(''); const chatHistory = ref([]); const isChatting = ref(false);
@@ -376,6 +374,7 @@ createApp({
             return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalDividend, totalNav: cash + investedAmount + totalUnrealized };
         });
 
+        // 💡 升級版：智能排隊防超時的全持倉掃描
         const scanAllQuantRisk = async () => {
             const now = new Date();
             const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Singapore', hour12: false, hour: 'numeric', minute: 'numeric', year: 'numeric', month: '2-digit', day: '2-digit' });
@@ -391,8 +390,9 @@ createApp({
             const dateStr = `${yr}-${mo}-${dy}`;
             let currentWindowId = null;
 
+            // ⚠️ 測試期間若需放寬時間，可修改此處邏輯
             if (timeVal >= 6 && timeVal <= 8) { currentWindowId = `${dateStr}-morning`; } 
-            else if (timeVal >= 20.5 && timeVal <= 22.5) { currentWindowId = `${dateStr}-night`; } 
+            else if (timeVal >= 20.5 && timeVal <= 23.5) { currentWindowId = `${dateStr}-night`; } 
             else { alert("⛔ 嚴格風控紀律限制：\n全持股量化掃描僅能在新加坡時間 06:00-08:00 (盤後) 或 20:30-22:30 (盤前) 執行。\n目前非有效時間，請耐心等待。"); return; }
 
             const lastScan = localStorage.getItem('last_full_scan_window');
@@ -402,18 +402,39 @@ createApp({
             isScanningAll.value = true;
             const symbols = Object.keys(dashboard.value.holdings).filter(s => dashboard.value.holdings[s].shares > 0);
             
-            symbols.forEach(sym => { quantData[sym] = { catalyst_prob: 0, narrative_score: 0, shortage_momentum: 0, mispricing_gap: 0, atr_percent: '...', action_zone: '🚀 伺服器批次運算中...' }; });
+            // 先顯示排隊骨架
+            symbols.forEach(sym => { quantData[sym] = { catalyst_prob: 0, narrative_score: 0, shortage_momentum: 0, mispricing_gap: 0, atr_percent: '...', action_zone: '⏳ 準備排隊掃描...' }; });
 
-            try {
-                const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify(symbols))}&password=${encodeURIComponent(password.value)}`);
-                const d = await r.json();
-                if (d.status === 'success') {
-                    Object.keys(d.data).forEach(sym => { quantData[sym] = d.data[sym]; });
-                    localStorage.setItem('last_full_scan_window', currentWindowId);
-                    alert("✅ 全持倉四維度量化掃描完成！");
-                } else { throw new Error(d.message); }
-            } catch(e) { alert(`掃描失敗: ${e.message}`); symbols.forEach(sym => { quantData[sym].action_zone = '運算中斷'; }); } 
-            finally { isScanningAll.value = false; }
+            // 💡 智能分批發送 (每批 3 檔)
+            const chunkSize = 3;
+            let hasError = false;
+
+            for (let i = 0; i < symbols.length; i += chunkSize) {
+                const chunk = symbols.slice(i, i + chunkSize);
+                // 更新當前批次的狀態
+                chunk.forEach(sym => { quantData[sym].action_zone = '🚀 伺服器運算中...'; });
+                
+                try {
+                    const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify(chunk))}&password=${encodeURIComponent(password.value)}`);
+                    const d = await r.json();
+                    if (d.status === 'success') {
+                        Object.keys(d.data).forEach(sym => { quantData[sym] = d.data[sym]; });
+                    } else { throw new Error(d.message); }
+                } catch(e) { 
+                    console.error("批次掃描錯誤:", e);
+                    chunk.forEach(sym => { quantData[sym].action_zone = '⚠️ 連線中斷，請重試'; });
+                    hasError = true;
+                }
+            }
+
+            isScanningAll.value = false;
+            
+            if (!hasError) {
+                localStorage.setItem('last_full_scan_window', currentWindowId);
+                alert("✅ 全持倉四維度量化掃描完成！");
+            } else {
+                alert("⚠️ 部分標的掃描發生錯誤或連線逾時。請確認 Apps Script API 權限是否設為「所有人」。\n(或可稍後點擊該標的旁邊的 [🔄 更新] 單獨重試)");
+            }
         };
 
         const sendChat = async () => {
@@ -429,21 +450,9 @@ createApp({
             finally { isChatting.value = false; nextTick(() => { const b = document.getElementById('chat-box'); b.scrollTop = b.scrollHeight; }); }
         };
 
-        // ✨ 補回：全局健檢 AI 分析
         const reviewPortfolio = async () => { selectedSymbol.value = "Portfolio Review"; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; let pStr = `總資金: $${dashboard.value.totalNav.toFixed(0)}\n`; Object.keys(dashboard.value.holdings).forEach(s => { const h = dashboard.value.holdings[s]; if(h.shares > 0) pStr += `- ${s}: 佔比 ${((h.shares*h.currentPrice)/dashboard.value.totalNav*100).toFixed(1)}%\n`; }); try { const r = await fetch(`${API_URL}?action=review_portfolio&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 健檢失敗: ${e.message}`; } finally { aiLoading.value = false; } };
-        
-        // ✨ 補回：單股深度分析 AI
         const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${s}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
-        
-        // ✨ 補回：發布看版的自動 AI 生成功能
-        const generateAnalysis = async () => {
-            if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return;
-            isGeneratingAnalysis.value = true;
-            try {
-                const r = await fetch(`${API_URL}?action=analyze&symbol=${recForm.symbol}&password=${encodeURIComponent(password.value)}`);
-                const d = await r.json(); recForm.analysis = d.analysis;
-            } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; }
-        };
+        const generateAnalysis = async () => { if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return; isGeneratingAnalysis.value = true; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${recForm.symbol}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); recForm.analysis = d.analysis; } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; } };
 
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
@@ -487,7 +496,6 @@ createApp({
         const monthlyStats = computed(() => { const s = {}; sortedTransactions.value.forEach(t => { if(t.type.toLowerCase()==='sell' && t.realizedPnL) { const m = t.date.substring(0,7); s[m] = (s[m]||0) + t.realizedPnL; } }); return Object.keys(s).sort().reverse().map(m => ({ month: m, pnl: s[m] })); });
 
         return { 
-            // 🟢 所有變數與函數完整返回，確保無遺漏
             dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats, quantData,
             sortedCash: computed(()=>[...cashAdjustments.value].reverse()), sortedRecommendations: computed(()=>[...recommendations.value].reverse()), 
             fetchData, saveData, toggleDarkMode, reviewPortfolio, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
