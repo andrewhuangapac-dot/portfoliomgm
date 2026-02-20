@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>美股量化投資管理</title>
+    <title>美股量化管理</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -18,7 +18,6 @@
         .dark .markdown-content h3 { color: #f8fafc; } .markdown-content ul { list-style-type: disc; padding-left: 20px; }
         .markdown-content strong { font-weight: 900; color: #1e293b; background: rgba(59, 130, 246, 0.1); padding: 0 4px; border-radius: 4px; }
         .dark .markdown-content strong { color: #93c5fd; background: rgba(59, 130, 246, 0.2); }
-        /* 漸層進度條 */
         .progress-bar-bg { background: #e2e8f0; border-radius: 4px; height: 5px; width: 100%; overflow: hidden; }
         .dark .progress-bar-bg { background: #334155; }
         .progress-fill-red { background: linear-gradient(90deg, #ef4444, #f97316); }
@@ -33,7 +32,7 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-1">
         <div>
             <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
-                Quant Terminal <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black tracking-widest">v4.1 4-PILLARS</span>
+                Quant Terminal <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black tracking-widest">v4.2 STRICT</span>
             </h1>
             <p v-if="isSyncing" class="text-blue-500 text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">🔄 Syncing Backend...</p>
             <p v-else class="text-green-500 dark:text-green-400 text-xs mt-1 font-bold tracking-widest uppercase">✓ 4-Pillars Engine Active</p>
@@ -91,7 +90,13 @@
         <div class="lg:col-span-3 space-y-6">
             
             <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
-                <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 font-black text-xs uppercase text-slate-500">💼 四大支柱量化雷達 (4-Pillars Risk Radar)</div>
+                <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <span class="font-black text-xs uppercase text-slate-500">💼 四大支柱量化雷達 (4-Pillars Risk Radar)</span>
+                    <button @click="scanAllQuantRisk" :disabled="isScanningAll" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-lg transition flex items-center gap-2">
+                        <span v-if="isScanningAll" class="animate-pulse">⏳ 掃描分析中...</span>
+                        <span v-else>🚀 執行全持倉量化掃描 (限 SG 06-08 / 20-22)</span>
+                    </button>
+                </div>
                 <div class="overflow-x-auto no-scrollbar">
                     <table class="w-full text-sm min-w-[1000px]">
                         <thead class="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px] uppercase font-bold">
@@ -107,9 +112,6 @@
                             <tr v-for="(h, sym) in dashboard.holdings" :key="sym" v-show="h.shares > 0" class="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
                                 <td class="p-4 font-black text-lg">
                                     {{ sym }} <span class="block text-[10px] font-normal text-slate-400">{{ h.shares }} 股</span>
-                                    <button @click="scanQuantRisk(sym)" class="mt-2 text-[9px] text-blue-500 border border-blue-200 dark:border-blue-800 px-2 py-0.5 rounded hover:bg-blue-50 dark:hover:bg-blue-900 transition flex items-center gap-1">
-                                        <span v-if="!quantData[sym]">🔍 掃描</span><span v-else>🔄 更新</span>
-                                    </button>
                                 </td>
                                 <td class="p-4 text-right font-mono text-slate-500 dark:text-slate-400">
                                     ${{ formatCurrency(h.avgCost, 2) }}
@@ -126,7 +128,7 @@
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5" :class="quantData[sym].catalyst_prob > 65 ? 'text-red-500' : ''"><span>硬催化劑機率</span><span>{{quantData[sym].catalyst_prob}}%</span></div>
                                         <div class="progress-bar-bg"><div class="h-full" :class="quantData[sym].catalyst_prob > 65 ? 'progress-fill-red' : 'progress-fill-blue'" :style="{width: quantData[sym].catalyst_prob + '%'}"></div></div>
                                     </div>
-                                    <span v-else class="text-[10px] text-slate-400 italic">點擊掃描讀取數據...</span>
+                                    <span v-else class="text-[10px] text-slate-400 italic">待掃描...</span>
                                 </td>
                                 
                                 <td class="p-4">
@@ -136,6 +138,7 @@
                                         <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5"><span>錯定價修復空間</span><span>{{quantData[sym].mispricing_gap}}%</span></div>
                                         <div class="progress-bar-bg"><div class="h-full progress-fill-green" :style="{width: quantData[sym].mispricing_gap + '%'}"></div></div>
                                     </div>
+                                    <span v-else class="text-[10px] text-slate-400 italic">待掃描...</span>
                                 </td>
 
                                 <td class="p-4">
@@ -143,6 +146,7 @@
                                         <div class="text-[10px] font-bold text-slate-500 mb-1">ATR 波動: <span class="font-mono">{{quantData[sym].atr_percent}}%</span></div>
                                         <div class="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-1.5 rounded-lg leading-snug">{{quantData[sym].action_zone}}</div>
                                     </div>
+                                    <span v-else class="text-[10px] text-slate-400 italic">待掃描...</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -202,30 +206,14 @@
                         <input v-model.number="recForm.price" type="number" step="0.01" placeholder="目標價格" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                         <input v-model.number="recForm.count" type="number" placeholder="AI信心" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                     </div>
-                    <textarea v-model="recForm.analysis" rows="2" placeholder="敘事邏輯或催化劑說明..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-[11px] outline-none"></textarea>
-                    <button @click="addRecommendation" class="w-full bg-slate-800 text-white py-3 rounded-xl font-black text-xs shadow-lg">發布至對外看板</button>
+                    <textarea v-model="recForm.analysis" rows="3" placeholder="敘事邏輯或催化劑說明..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-[11px] outline-none"></textarea>
+                    <button @click="addRecommendation" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-black text-xs shadow-lg transition">發布至對外看板</button>
                 </div>
             </div>
 
             <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月獲利</div>
-                <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
-                    <div v-for="s in monthlyStats" :key="s.month" class="p-4 flex justify-between text-sm">
-                        <span class="font-bold text-slate-500 uppercase">{{ s.month }}</span><span :class="s.pnl >= 0 ? 'text-up' : 'text-down'" class="font-black font-mono">{{ s.pnl >= 0 ? '+' : '' }}${{ formatCurrency(s.pnl, 0) }}</span>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-                <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">💵 現金流</div>
-                <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
-                    <div v-for="c in sortedCash" :key="c.id" class="p-4 flex justify-between text-sm"><div class="max-w-[60%]"><p class="font-black truncate text-xs">{{ c.note }}</p><p class="text-[10px] text-slate-400 font-mono">{{ c.date }}</p></div><span :class="c.amount >= 0 ? 'text-blue-500' : 'text-red-500'" class="font-black font-mono text-xs">{{ c.amount >= 0 ? '+' : '' }}${{ formatCurrency(c.amount, 0) }}</span></div>
-                </div>
-            </div>
-            
-            <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
                 <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 font-black text-xs uppercase text-slate-500">已發布公告紀錄</div>
-                <div class="divide-y divide-slate-50 dark:divide-slate-700 max-h-80 overflow-y-auto no-scrollbar">
+                <div class="divide-y divide-slate-50 dark:divide-slate-700 max-h-[500px] overflow-y-auto no-scrollbar">
                     <div v-for="r in sortedRecommendations" :key="r.id" class="p-4 relative">
                         <button @click="removeRecommendation(r.id)" class="absolute top-4 right-4 text-slate-300 hover:text-red-500">×</button>
                         <p class="font-black text-sm">{{ r.symbol }} <span class="text-[9px] text-slate-400 font-mono ml-1">{{ r.date }}</span></p>
@@ -235,8 +223,17 @@
                         </div>
                         <div v-if="r.analysis" class="mt-2">
                             <button @click="r.showDetails = !r.showDetails" class="text-[9px] text-blue-500 font-black hover:underline">{{ r.showDetails ? '隱藏分析 ▲' : '查看觀點 ▼' }}</button>
-                            <div v-if="r.showDetails" class="mt-2 text-[11px] bg-slate-50 dark:bg-slate-900 p-3 rounded-xl leading-relaxed markdown-content border border-slate-100 dark:border-slate-700" v-html="marked.parse(r.analysis)"></div>
+                            <div v-if="r.showDetails" class="mt-2 text-[11px] bg-slate-50 dark:bg-slate-900 p-3 rounded-xl leading-relaxed markdown-content border border-slate-100 dark:border-slate-700" v-html="r.analysis ? marked.parse(r.analysis) : ''"></div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月獲利</div>
+                <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
+                    <div v-for="s in monthlyStats" :key="s.month" class="p-4 flex justify-between text-sm">
+                        <span class="font-bold text-slate-500 uppercase">{{ s.month }}</span><span :class="s.pnl >= 0 ? 'text-up' : 'text-down'" class="font-black font-mono">{{ s.pnl >= 0 ? '+' : '' }}${{ formatCurrency(s.pnl, 0) }}</span>
                     </div>
                 </div>
             </div>
@@ -252,7 +249,7 @@
             </div>
             <div class="flex-1 p-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 flex flex-col gap-3 text-sm no-scrollbar" id="chat-box">
                 <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-300 w-[85%] markdown-content">
-                    Boss，四大支柱分析引擎已就緒。我已載入您當前 <b>${{formatCurrency(dashboard.totalNav)}}</b> 的組合。請問要找錯定價機會，還是評估催化劑？
+                    Boss，四大支柱分析引擎已就緒。我已載入您當前 <b>${{formatCurrency(dashboard.totalNav)}}</b> 的組合。請問需要什麼幫助？
                 </div>
                 <div v-for="(msg, i) in chatHistory" :key="i" class="flex flex-col w-[85%]" :class="msg.role==='user'?'self-end items-end':'self-start'">
                     <div class="p-3 rounded-2xl shadow-sm border text-[13px]" :class="msg.role==='user'?'bg-blue-600 text-white rounded-tr-none border-blue-700':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-none border-slate-100 dark:border-slate-700 markdown-content'" v-html="msg.role==='ai'? marked.parse(msg.text) : msg.text"></div>
@@ -279,19 +276,18 @@
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
 // 🔴 必填：請填入您的 Apps Script 新網址
-const API_URL = 'https://script.google.com/macros/s/AKfycbw9uKEAa3Ggrvb06PfA6q7uJ4j9T3BOD3QhT90cwcVMfW7lR-Gm5GB0jwuKOUsc1B5v/exec'; 
+const API_URL = 'https://script.google.com/macros/s/AKfycbyzoCp5fdlg-BuUX4kdfegYxu7IKX0X0GXufx1390XDu-XeW4D5VpH7XfAaAx1cOyUO/exec'; 
 
 createApp({
     setup() {
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); const recommendations = ref([]);
         const navHistoryData = ref([]); const quantData = reactive({});
-        const isSyncing = ref(false); const password = ref(localStorage.getItem('p_pass') || '');
+        const isSyncing = ref(false); const isScanningAll = ref(false); const password = ref(localStorage.getItem('p_pass') || '');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         const recForm = reactive({ symbol: '', type: 'New', price: '', count: 1, analysis: '' });
         const searchQuery = ref(''); const showCashModal = ref(false); const showAIModal = ref(false); 
         const aiLoading = ref(false); const selectedSymbol = ref(''); const aiContent = ref('');
         const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
-        const isGeneratingAnalysis = ref(false);
 
         const showCopilot = ref(false); const chatInput = ref(''); const chatHistory = ref([]); const isChatting = ref(false);
 
@@ -327,14 +323,10 @@ createApp({
             if (!confirm('確認儲存並記錄當前淨值嗎？')) return;
             try {
                 const cleanRecs = recommendations.value.map(({showDetails, ...rest}) => rest);
-                const payload = { 
-                    transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: cleanRecs,
-                    currentNav: dashboard.value.totalNav
-                };
+                const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: cleanRecs, currentNav: dashboard.value.totalNav };
                 const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, { method: 'POST', body: JSON.stringify(payload) });
                 const d = await res.json();
                 if(d.status === 'error') throw new Error(d.message);
-                
                 alert('儲存與淨值快照記錄成功！'); fetchData(false);
             } catch(e) { alert(`儲存失敗: ${e.message}`); }
         };
@@ -361,14 +353,65 @@ createApp({
             return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalDividend, totalNav: cash + investedAmount + totalUnrealized };
         });
 
-        // 🟢 四大支柱量化掃描觸發
-        const scanQuantRisk = async (sym) => {
+        // 🟢 嚴格風控：一鍵全持倉批次掃描 (帶有時間與頻率限制)
+        const scanAllQuantRisk = async () => {
+            const now = new Date();
+            // 轉換為新加坡時間進行校驗
+            const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Singapore', hour12: false, hour: 'numeric', minute: 'numeric', year: 'numeric', month: '2-digit', day: '2-digit' });
+            const parts = formatter.formatToParts(now);
+            let h = 0, m = 0, yr = '', mo = '', dy = '';
+            parts.forEach(p => {
+               if (p.type === 'hour') h = parseInt(p.value); if (p.type === 'minute') m = parseInt(p.value);
+               if (p.type === 'year') yr = p.value; if (p.type === 'month') mo = p.value; if (p.type === 'day') dy = p.value;
+            });
+            if (h === 24) h = 0;
+
+            const timeVal = h + (m / 60);
+            const dateStr = `${yr}-${mo}-${dy}`;
+            let currentWindowId = null;
+
+            if (timeVal >= 6 && timeVal <= 8) {
+                currentWindowId = `${dateStr}-morning`;
+            } else if (timeVal >= 20.5 && timeVal <= 22.5) {
+                currentWindowId = `${dateStr}-night`;
+            } else {
+                alert("⛔ 嚴格風控紀律限制：\n全持股量化掃描僅能在新加坡時間 06:00-08:00 (盤後) 或 20:30-22:30 (盤前) 執行。\n目前非有效時間，請耐心等待。");
+                return;
+            }
+
+            const lastScan = localStorage.getItem('last_full_scan_window');
+            if (lastScan === currentWindowId) {
+                alert("⛔ 風控紀律限制：\n您在本次時間視窗內已經執行過全持股掃描。\n量化策略要求減少過度盯盤與頻繁運算，請等待下一個時段。");
+                return;
+            }
+
             if (!checkPassword()) return;
-            quantData[sym] = { catalyst_prob: 0, narrative_score: 0, shortage_momentum: 0, mispricing_gap: 0, atr_percent: '...', action_zone: '掃描四象限...' };
+
+            isScanningAll.value = true;
+            const symbols = Object.keys(dashboard.value.holdings).filter(s => dashboard.value.holdings[s].shares > 0);
+            
+            // 先顯示骨架
+            symbols.forEach(sym => {
+                quantData[sym] = { catalyst_prob: 0, narrative_score: 0, shortage_momentum: 0, mispricing_gap: 0, atr_percent: '...', action_zone: '🚀 伺服器批次運算中...' };
+            });
+
             try {
-                const r = await fetch(`${API_URL}?action=quant_scan&symbol=${sym}&password=${encodeURIComponent(password.value)}`);
-                const d = await r.json(); quantData[sym] = d.data;
-            } catch(e) { quantData[sym].action_zone = '讀取失敗'; }
+                const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify(symbols))}&password=${encodeURIComponent(password.value)}`);
+                const d = await r.json();
+                if (d.status === 'success') {
+                    Object.keys(d.data).forEach(sym => { quantData[sym] = d.data[sym]; });
+                    // 標記本次視窗已使用
+                    localStorage.setItem('last_full_scan_window', currentWindowId);
+                    alert("✅ 全持倉四維度量化掃描完成！");
+                } else {
+                    throw new Error(d.message);
+                }
+            } catch(e) {
+                alert(`掃描失敗: ${e.message}`);
+                symbols.forEach(sym => { quantData[sym].action_zone = '運算中斷'; });
+            } finally {
+                isScanningAll.value = false;
+            }
         };
 
         const sendChat = async () => {
@@ -386,37 +429,23 @@ createApp({
 
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
-            const isDark = document.documentElement.classList.contains('dark');
-            const txtColor = isDark ? '#cbd5e1' : '#64748b';
-            
+            const isDark = document.documentElement.classList.contains('dark'); const txtColor = isDark ? '#cbd5e1' : '#64748b';
             const ctxPie = document.getElementById('allocationChart'); 
             if(ctxPie) {
                 if(pieChart) pieChart.destroy();
                 const validHoldings = Object.entries(dashboard.value.holdings).filter(([k, v]) => v.shares > 0);
-                if(validHoldings.length > 0) {
-                    pieChart = new Chart(ctxPie, {
-                        type: 'doughnut',
-                        data: { labels: validHoldings.map(h => h[0]), datasets: [{ data: validHoldings.map(h => h[1].totalCost), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'], borderWidth: isDark? 0 : 2 }] },
-                        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '75%' }
-                    });
-                }
+                if(validHoldings.length > 0) { pieChart = new Chart(ctxPie, { type: 'doughnut', data: { labels: validHoldings.map(h => h[0]), datasets: [{ data: validHoldings.map(h => h[1].totalCost), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899'], borderWidth: isDark? 0 : 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '75%' } }); }
             }
-
             const ctxLine = document.getElementById('navChart');
             if(ctxLine && navHistoryData.value.length > 0) {
                 if(lineChart) lineChart.destroy();
                 const history = [...navHistoryData.value].sort((a,b) => new Date(a.date) - new Date(b.date));
-                lineChart = new Chart(ctxLine, {
-                    type: 'line',
-                    data: { labels: history.map(h => h.date.substring(5)), datasets: [{ label: 'NAV', data: history.map(h => h.nav), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: txtColor } }, y: { ticks: { color: txtColor } } } }
-                });
+                lineChart = new Chart(ctxLine, { type: 'line', data: { labels: history.map(h => h.date.substring(5)), datasets: [{ label: 'NAV', data: history.map(h => h.nav), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: txtColor } }, y: { ticks: { color: txtColor } } } } });
             }
         };
         watch(() => [dashboard.value.holdings, navHistoryData.value], renderChart, { deep: true });
 
         const reviewPortfolio = async () => { selectedSymbol.value = "Portfolio Review"; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; let pStr = `總資金: $${dashboard.value.totalNav.toFixed(0)}\n`; Object.keys(dashboard.value.holdings).forEach(s => { const h = dashboard.value.holdings[s]; if(h.shares > 0) pStr += `- ${s}: 佔比 ${((h.shares*h.currentPrice)/dashboard.value.totalNav*100).toFixed(1)}%\n`; }); try { const r = await fetch(`${API_URL}?action=review_portfolio&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 健檢失敗: ${e.message}`; } finally { aiLoading.value = false; } };
-        const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${s}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
         const addTransaction = () => { if(!form.symbol) return; transactions.value.push({id:Date.now(), ...form, symbol: form.symbol.toUpperCase()}); form.symbol=''; form.price=''; form.shares=''; };
         const removeTransaction = (id) => { if(confirm('刪除交易？')) transactions.value = transactions.value.filter(t=>t.id!==id); };
         const addCashAdjustment = () => { if(!cashForm.amount) return; cashAdjustments.value.push({id:Date.now(), ...cashForm}); showCashModal.value=false; cashForm.amount=''; cashForm.note=''; };
@@ -443,7 +472,8 @@ createApp({
         return { 
             dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats, quantData,
             sortedCash: computed(()=>[...cashAdjustments.value].reverse()), sortedRecommendations: computed(()=>[...recommendations.value].reverse()), 
-            fetchData, saveData, toggleDarkMode, reviewPortfolio, openAIModal, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, scanQuantRisk,
+            fetchData, saveData, toggleDarkMode, reviewPortfolio, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
+            scanAllQuantRisk, isScanningAll,
             showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked, getRecTypeLabel, getRecTypeClass,
             showCopilot, chatInput, chatHistory, sendChat, isChatting
         };
