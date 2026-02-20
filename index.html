@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>美股量化投資管理</title>
+    <title>美股量化投資管理 v1.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -32,13 +32,15 @@
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4 px-1">
         <div>
             <h1 class="text-2xl font-black tracking-tight flex items-center gap-2">
-                Quant Terminal <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black tracking-widest">v1.1</span>
+                Quant Terminal <span class="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded font-black tracking-widest">v1.1 STRICT</span>
             </h1>
             <p v-if="isSyncing" class="text-blue-500 text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">🔄 Syncing Backend...</p>
-            <p v-else class="text-green-500 dark:text-green-400 text-xs mt-1 font-bold tracking-widest uppercase">✓ 4-Pillars Engine Active</p>
+            <p v-else class="text-green-500 dark:text-green-400 text-xs mt-1 font-bold tracking-widest uppercase">AI Engine Active</p>
         </div>
         <div class="flex w-full md:w-auto gap-2 flex-wrap">
-            <button @click="reviewPortfolio" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-black shadow-lg flex items-center gap-1"><span class="text-lg">🧠</span> 全局健檢</button>
+            <button @click="reviewPortfolio" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl text-sm font-black shadow-lg flex items-center gap-1">
+                <span class="text-lg">🛡️</span> 全局健檢
+            </button>
             <button @click="toggleDarkMode" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded-xl text-sm font-bold shadow-sm">🌓</button>
             <button @click="fetchData(true)" class="flex-1 md:flex-none px-4 py-2 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow-sm text-sm font-bold">🔄 同步</button>
             <button @click="saveData" class="flex-1 md:flex-none px-4 py-2 bg-slate-900 dark:bg-black text-white rounded-xl shadow-lg text-sm font-bold">💾 儲存淨值</button>
@@ -106,6 +108,7 @@
                                 <th class="p-4 text-left w-56">🎯 策略核心 (敘事 & 催化劑)</th>
                                 <th class="p-4 text-left w-56">🔥 動能與套利 (緊缺 & 錯定價)</th>
                                 <th class="p-4 text-left w-48">🛡️ ATR 動態防守帶</th>
+                                <th class="p-4 text-center">AI深度</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
@@ -147,6 +150,10 @@
                                         <div class="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-1.5 rounded-lg leading-snug">{{quantData[sym].action_zone}}</div>
                                     </div>
                                     <span v-else class="text-[10px] text-slate-400 italic">待掃描...</span>
+                                </td>
+
+                                <td class="p-4 text-center">
+                                    <button @click="openAIModal(sym)" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black px-3 py-1.5 rounded-xl hover:bg-slate-200 transition">分析</button>
                                 </td>
                             </tr>
                         </tbody>
@@ -191,6 +198,7 @@
         </div>
 
         <div class="space-y-6">
+            
             <div class="bg-white dark:bg-slate-800 shadow-2xl rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden">
                 <div class="p-5 bg-slate-900 dark:bg-black text-white font-black text-xs uppercase flex justify-between">
                     <span>📢 戰略公告發布</span>
@@ -206,6 +214,11 @@
                         <input v-model.number="recForm.price" type="number" step="0.01" placeholder="目標價格" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                         <input v-model.number="recForm.count" type="number" placeholder="AI信心" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                     </div>
+                    
+                    <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="w-full py-2.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl text-[11px] font-black border border-purple-200 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-800 transition">
+                        {{ isGeneratingAnalysis ? '⏳ Gemini 深度運算中...' : '✨ 自動生成 AI 觀點' }}
+                    </button>
+                    
                     <textarea v-model="recForm.analysis" rows="3" placeholder="敘事邏輯或催化劑說明..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-[11px] outline-none"></textarea>
                     <button @click="addRecommendation" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-black text-xs shadow-lg transition">發布至對外看板</button>
                 </div>
@@ -235,6 +248,13 @@
                     <div v-for="s in monthlyStats" :key="s.month" class="p-4 flex justify-between text-sm">
                         <span class="font-bold text-slate-500 uppercase">{{ s.month }}</span><span :class="s.pnl >= 0 ? 'text-up' : 'text-down'" class="font-black font-mono">{{ s.pnl >= 0 ? '+' : '' }}${{ formatCurrency(s.pnl, 0) }}</span>
                     </div>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">💵 現金流</div>
+                <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
+                    <div v-for="c in sortedCash" :key="c.id" class="p-4 flex justify-between text-sm"><div class="max-w-[60%]"><p class="font-black truncate text-xs">{{ c.note }}</p><p class="text-[10px] text-slate-400 font-mono">{{ c.date }}</p></div><span :class="c.amount >= 0 ? 'text-blue-500' : 'text-red-500'" class="font-black font-mono text-xs">{{ c.amount >= 0 ? '+' : '' }}${{ formatCurrency(c.amount, 0) }}</span></div>
                 </div>
             </div>
 
@@ -288,6 +308,9 @@ createApp({
         const searchQuery = ref(''); const showCashModal = ref(false); const showAIModal = ref(false); 
         const aiLoading = ref(false); const selectedSymbol = ref(''); const aiContent = ref('');
         const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
+        
+        // ✨ AI 狀態變數加回
+        const isGeneratingAnalysis = ref(false);
 
         const showCopilot = ref(false); const chatInput = ref(''); const chatHistory = ref([]); const isChatting = ref(false);
 
@@ -353,10 +376,8 @@ createApp({
             return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalDividend, totalNav: cash + investedAmount + totalUnrealized };
         });
 
-        // 🟢 嚴格風控：一鍵全持倉批次掃描 (帶有時間與頻率限制)
         const scanAllQuantRisk = async () => {
             const now = new Date();
-            // 轉換為新加坡時間進行校驗
             const formatter = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Singapore', hour12: false, hour: 'numeric', minute: 'numeric', year: 'numeric', month: '2-digit', day: '2-digit' });
             const parts = formatter.formatToParts(now);
             let h = 0, m = 0, yr = '', mo = '', dy = '';
@@ -370,48 +391,29 @@ createApp({
             const dateStr = `${yr}-${mo}-${dy}`;
             let currentWindowId = null;
 
-            if (timeVal >= 6 && timeVal <= 8) {
-                currentWindowId = `${dateStr}-morning`;
-            } else if (timeVal >= 20.5 && timeVal <= 22.5) {
-                currentWindowId = `${dateStr}-night`;
-            } else {
-                alert("⛔ 嚴格風控紀律限制：\n全持股量化掃描僅能在新加坡時間 06:00-08:00 (盤後) 或 20:30-22:30 (盤前) 執行。\n目前非有效時間，請耐心等待。");
-                return;
-            }
+            if (timeVal >= 6 && timeVal <= 8) { currentWindowId = `${dateStr}-morning`; } 
+            else if (timeVal >= 20.5 && timeVal <= 22.5) { currentWindowId = `${dateStr}-night`; } 
+            else { alert("⛔ 嚴格風控紀律限制：\n全持股量化掃描僅能在新加坡時間 06:00-08:00 (盤後) 或 20:30-22:30 (盤前) 執行。\n目前非有效時間，請耐心等待。"); return; }
 
             const lastScan = localStorage.getItem('last_full_scan_window');
-            if (lastScan === currentWindowId) {
-                alert("⛔ 風控紀律限制：\n您在本次時間視窗內已經執行過全持股掃描。\n量化策略要求減少過度盯盤與頻繁運算，請等待下一個時段。");
-                return;
-            }
-
+            if (lastScan === currentWindowId) { alert("⛔ 風控紀律限制：\n您在本次時間視窗內已經執行過全持股掃描。\n量化策略要求減少過度盯盤與頻繁運算，請等待下一個時段。"); return; }
             if (!checkPassword()) return;
 
             isScanningAll.value = true;
             const symbols = Object.keys(dashboard.value.holdings).filter(s => dashboard.value.holdings[s].shares > 0);
             
-            // 先顯示骨架
-            symbols.forEach(sym => {
-                quantData[sym] = { catalyst_prob: 0, narrative_score: 0, shortage_momentum: 0, mispricing_gap: 0, atr_percent: '...', action_zone: '🚀 伺服器批次運算中...' };
-            });
+            symbols.forEach(sym => { quantData[sym] = { catalyst_prob: 0, narrative_score: 0, shortage_momentum: 0, mispricing_gap: 0, atr_percent: '...', action_zone: '🚀 伺服器批次運算中...' }; });
 
             try {
                 const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify(symbols))}&password=${encodeURIComponent(password.value)}`);
                 const d = await r.json();
                 if (d.status === 'success') {
                     Object.keys(d.data).forEach(sym => { quantData[sym] = d.data[sym]; });
-                    // 標記本次視窗已使用
                     localStorage.setItem('last_full_scan_window', currentWindowId);
                     alert("✅ 全持倉四維度量化掃描完成！");
-                } else {
-                    throw new Error(d.message);
-                }
-            } catch(e) {
-                alert(`掃描失敗: ${e.message}`);
-                symbols.forEach(sym => { quantData[sym].action_zone = '運算中斷'; });
-            } finally {
-                isScanningAll.value = false;
-            }
+                } else { throw new Error(d.message); }
+            } catch(e) { alert(`掃描失敗: ${e.message}`); symbols.forEach(sym => { quantData[sym].action_zone = '運算中斷'; }); } 
+            finally { isScanningAll.value = false; }
         };
 
         const sendChat = async () => {
@@ -425,6 +427,22 @@ createApp({
                 const d = await r.json(); chatHistory.value.push({ role: 'ai', text: d.reply });
             } catch(e) { chatHistory.value.push({ role: 'ai', text: '連線中斷，請重試。' }); }
             finally { isChatting.value = false; nextTick(() => { const b = document.getElementById('chat-box'); b.scrollTop = b.scrollHeight; }); }
+        };
+
+        // ✨ 補回：全局健檢 AI 分析
+        const reviewPortfolio = async () => { selectedSymbol.value = "Portfolio Review"; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; let pStr = `總資金: $${dashboard.value.totalNav.toFixed(0)}\n`; Object.keys(dashboard.value.holdings).forEach(s => { const h = dashboard.value.holdings[s]; if(h.shares > 0) pStr += `- ${s}: 佔比 ${((h.shares*h.currentPrice)/dashboard.value.totalNav*100).toFixed(1)}%\n`; }); try { const r = await fetch(`${API_URL}?action=review_portfolio&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 健檢失敗: ${e.message}`; } finally { aiLoading.value = false; } };
+        
+        // ✨ 補回：單股深度分析 AI
+        const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${s}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
+        
+        // ✨ 補回：發布看版的自動 AI 生成功能
+        const generateAnalysis = async () => {
+            if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return;
+            isGeneratingAnalysis.value = true;
+            try {
+                const r = await fetch(`${API_URL}?action=analyze&symbol=${recForm.symbol}&password=${encodeURIComponent(password.value)}`);
+                const d = await r.json(); recForm.analysis = d.analysis;
+            } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; }
         };
 
         let pieChart = null; let lineChart = null;
@@ -445,7 +463,6 @@ createApp({
         };
         watch(() => [dashboard.value.holdings, navHistoryData.value], renderChart, { deep: true });
 
-        const reviewPortfolio = async () => { selectedSymbol.value = "Portfolio Review"; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; let pStr = `總資金: $${dashboard.value.totalNav.toFixed(0)}\n`; Object.keys(dashboard.value.holdings).forEach(s => { const h = dashboard.value.holdings[s]; if(h.shares > 0) pStr += `- ${s}: 佔比 ${((h.shares*h.currentPrice)/dashboard.value.totalNav*100).toFixed(1)}%\n`; }); try { const r = await fetch(`${API_URL}?action=review_portfolio&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 健檢失敗: ${e.message}`; } finally { aiLoading.value = false; } };
         const addTransaction = () => { if(!form.symbol) return; transactions.value.push({id:Date.now(), ...form, symbol: form.symbol.toUpperCase()}); form.symbol=''; form.price=''; form.shares=''; };
         const removeTransaction = (id) => { if(confirm('刪除交易？')) transactions.value = transactions.value.filter(t=>t.id!==id); };
         const addCashAdjustment = () => { if(!cashForm.amount) return; cashAdjustments.value.push({id:Date.now(), ...cashForm}); showCashModal.value=false; cashForm.amount=''; cashForm.note=''; };
@@ -470,10 +487,11 @@ createApp({
         const monthlyStats = computed(() => { const s = {}; sortedTransactions.value.forEach(t => { if(t.type.toLowerCase()==='sell' && t.realizedPnL) { const m = t.date.substring(0,7); s[m] = (s[m]||0) + t.realizedPnL; } }); return Object.keys(s).sort().reverse().map(m => ({ month: m, pnl: s[m] })); });
 
         return { 
+            // 🟢 所有變數與函數完整返回，確保無遺漏
             dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats, quantData,
             sortedCash: computed(()=>[...cashAdjustments.value].reverse()), sortedRecommendations: computed(()=>[...recommendations.value].reverse()), 
-            fetchData, saveData, toggleDarkMode, reviewPortfolio, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
-            scanAllQuantRisk, isScanningAll,
+            fetchData, saveData, toggleDarkMode, reviewPortfolio, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
+            scanAllQuantRisk, isScanningAll, isGeneratingAnalysis,
             showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked, getRecTypeLabel, getRecTypeClass,
             showCopilot, chatInput, chatHistory, sendChat, isChatting
         };
