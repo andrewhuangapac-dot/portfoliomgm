@@ -282,6 +282,9 @@ createApp({
         const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
         const isGeneratingAnalysis = ref(false);
 
+        // 🟢 致命錯誤修復：補回被誤刪的 Copilot 變數宣告
+        const showCopilot = ref(false); const chatInput = ref(''); const chatHistory = ref([]); const isChatting = ref(false);
+
         const currentTab = ref('全局');
         const sectorNews = ref([]);
         const isFetchingNews = ref(false);
