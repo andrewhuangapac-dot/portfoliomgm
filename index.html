@@ -78,7 +78,7 @@
             </div>
         </header>
 
-        <div v-show="currentTab === '全局'">
+        <div v-if="currentTab === '全局'">
             <div class="grid grid-cols-2 lg:grid-cols-7 gap-3 mb-6">
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">可用現金</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard.cash) }} <span @click="showCashModal=true" class="text-[10px] text-blue-500 cursor-pointer underline ml-1">調節</span></p></div>
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">持倉總成本</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard.investedAmount) }}</p></div>
@@ -106,7 +106,7 @@
             </div>
         </div>
 
-        <div v-show="currentTab !== '全局'">
+        <div v-if="currentTab !== '全局'">
             
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div class="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/20 p-5 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col justify-center">
@@ -123,8 +123,7 @@
                     <p class="text-3xl font-black" :class="currentSectorStats.avgShortage > 70 ? 'text-purple-500' : 'text-slate-600'">{{ currentSectorStats.avgShortage }}<span class="text-sm ml-1 text-slate-400">/100</span></p>
                 </div>
             </div>
-
-            </div>
+        </div>
 
         <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm mb-6">
             <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -265,6 +264,7 @@ createApp({
                 try {
                     const p = JSON.parse(cached);
                     transactions.value = p.transactions||[]; marketData.value = p.marketData||{}; cashAdjustments.value = p.cashAdjustments||[]; recommendations.value = p.recommendations||[]; navHistoryData.value = p.navHistory||[];
+                    // 🟢 載入本機快取中的量化數據，讓畫面重新整理也不會空白
                     if (p.quantData) Object.assign(quantData, p.quantData); 
                 } catch(e) {}
             }
@@ -282,15 +282,22 @@ createApp({
                 const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
                 const data = await res.json();
                 if (data.status === 'error') throw new Error(data.message);
+                
                 transactions.value = data.transactions || []; marketData.value = data.marketData || {}; cashAdjustments.value = data.cashAdjustments || []; navHistoryData.value = data.navHistory || []; recommendations.value = (data.recommendations || []).map(r=>({...r, showDetails:false}));
-                if (data.quantData) { Object.keys(quantData).forEach(k => delete quantData[k]); Object.assign(quantData, data.quantData); }
+                
+                // 將後端傳來的 AI 分數寫入畫面的變數中
+                if (data.quantData) {
+                    Object.keys(quantData).forEach(k => delete quantData[k]);
+                    Object.assign(quantData, data.quantData);
+                }
+
                 localStorage.setItem('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData}));
             } catch (e) { if(forceAlert) alert(`同步失敗: ${e.message}`); } finally { isSyncing.value = false; }
         };
 
         const saveData = async () => {
             if (!checkPassword()) return;
-            if (!confirm('確認儲存並記錄當前淨值嗎？\n(量化掃描結果也將同步備份至雲端)')) return;
+            if (!confirm('確認儲存並記錄當前淨值嗎？\n(您的量化掃描結果也將同步備份至雲端)')) return;
             try {
                 const cleanRecs = recommendations.value.map(({showDetails, ...rest}) => rest);
                 const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: cleanRecs, currentNav: dashboard.value.totalNav, quantData: quantData };
@@ -371,9 +378,10 @@ createApp({
             return allHoldings.filter(h => h.sector === currentTab.value);
         });
 
-        // 🟢 v4.5 板塊專屬統計數據 (供板塊總覽看板顯示)
+        // 🟢 v4.5 板塊專屬統計數據 (修復：加入預設回傳值以防 null 報錯)
         const currentSectorStats = computed(() => {
-            if (currentTab.value === '全局') return null;
+            if (currentTab.value === '全局') return { totalValue: 0, weightPercent: 0, avgNarrative: 0, avgShortage: 0 };
+            
             let totalValue = 0; let totalNarrative = 0; let totalShortage = 0; let countWithData = 0;
             
             filteredHoldings.value.forEach(h => {
