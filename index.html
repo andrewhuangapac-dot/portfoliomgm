@@ -22,9 +22,10 @@
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-<div id="app" class="layout-container">
+<div id="app" class="layout-container" v-cloak>
+    
     <div class="sidebar bg-white dark:bg-slate-900 p-4">
-        <div class="mb-8"><h1 class="text-xl font-black">Quant Terminal</h1><span class="text-[10px] font-black text-indigo-500 uppercase">v5.0 Stable Matrix</span></div>
+        <div class="mb-8"><h1 class="text-xl font-black">Quant Terminal</h1><span class="text-[10px] font-black text-indigo-500 uppercase">v5.1 High Stability</span></div>
         <div @click="currentTab = '全局'" class="sidebar-item cursor-pointer px-3 py-2.5 rounded-lg mb-4 flex items-center gap-2" :class="{'active': currentTab === '全局'}">🌍 全局總覽</div>
         <div class="text-[10px] font-black text-slate-400 mb-2 px-3 uppercase tracking-widest">行業板塊</div>
         <div v-for="sector in sectorList" :key="sector.name" @click="currentTab = sector.name" class="sidebar-item cursor-pointer px-3 py-2.5 rounded-lg mb-1 flex justify-between items-center" :class="{'active': currentTab === sector.name}">
@@ -34,18 +35,19 @@
 
     <div class="main-content no-scrollbar pb-24">
         <header class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-            <div><h2 class="text-2xl font-black tracking-tight">{{ currentTab }}</h2><p v-if="isSyncing" class="text-blue-500 text-[10px] animate-pulse font-black uppercase">🔄 Syncing Backend...</p></div>
+            <div><h2 class="text-2xl font-black tracking-tight">{{ currentTab }}</h2><p v-if="isSyncing" class="text-blue-500 text-[10px] animate-pulse font-black uppercase">🔄 Syncing...</p></div>
             <div class="flex gap-2">
                 <button @click="runAutoSectorMap" :disabled="isReorganizing" class="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-black shadow-lg">✨ AI 智能分類</button>
                 <button @click="toggleDarkMode" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-bold">🌓</button>
                 <button @click="fetchData(true)" class="px-3 py-1.5 bg-white dark:bg-slate-800 border rounded-xl text-xs font-bold">🔄 同步</button>
+                <button @click="saveData" class="px-3 py-1.5 bg-slate-900 text-white rounded-xl text-xs font-bold">💾 儲存</button>
             </div>
         </header>
 
         <div v-if="currentTab === '全局'">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm"><p class="text-[10px] text-slate-400 font-black uppercase">可用現金</p><p class="text-lg font-black mt-1">${{ formatCurrency(dashboard.cash) }}</p></div>
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm"><p class="text-[10px] text-slate-400 font-black uppercase">持倉成本</p><p class="text-lg font-black mt-1">${{ formatCurrency(dashboard.investedAmount) }}</p></div>
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm"><p class="text-[10px] text-slate-400 font-black uppercase">持倉市值</p><p class="text-lg font-black mt-1">${{ formatCurrency(dashboard.investedValue) }}</p></div>
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm"><p class="text-[10px] text-slate-400 font-black uppercase">未實現損益</p><p class="text-lg font-black mt-1" :class="dashboard.totalUnrealized >= 0 ? 'text-up' : 'text-down'">${{ formatCurrency(dashboard.totalUnrealized) }}</p></div>
                 <div class="bg-slate-900 dark:bg-black p-4 rounded-3xl shadow-xl flex flex-col justify-center"><p class="text-[10px] text-slate-400 font-bold uppercase">總資產 (NAV)</p><p class="text-2xl font-black text-white mt-1">${{ formatCurrency(dashboard.totalNav) }}</p></div>
             </div>
@@ -63,18 +65,18 @@
                         </div>
                     </div>
                 </div>
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border shadow-sm"><h3 class="text-[11px] font-black uppercase text-slate-400 mb-2">NAV 歷史曲線</h3><div class="relative h-48"><canvas id="navChart"></canvas></div></div>
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border shadow-sm"><h3 class="text-[11px] font-black uppercase text-slate-400 mb-2">NAV 歷史趨勢</h3><div class="relative h-48"><canvas id="navChart"></canvas></div></div>
             </div>
             
             <div class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border shadow-sm mb-6">
-                <h3 class="font-black text-xs uppercase text-slate-500 mb-4 tracking-widest">🚀 執行交易</h3>
+                <h3 class="font-black text-xs uppercase text-slate-500 mb-4 tracking-widest">🚀 交易錄入</h3>
                 <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
                     <input type="date" v-model="form.date" class="bg-slate-50 dark:bg-slate-900 border p-3 rounded-xl text-sm outline-none">
                     <select v-model="form.type" class="bg-slate-50 dark:bg-slate-900 border p-3 rounded-xl text-sm font-black outline-none"><option value="buy">買入</option><option value="sell">賣出</option></select>
                     <input type="text" v-model="form.symbol" placeholder="代號" class="bg-slate-50 dark:bg-slate-900 border p-3 rounded-xl text-sm uppercase font-black md:col-span-2">
                     <input type="number" step="0.01" v-model.number="form.price" placeholder="價格" class="bg-slate-50 dark:bg-slate-900 border p-3 rounded-xl text-sm font-mono">
                     <input type="number" v-model.number="form.shares" placeholder="股數" class="bg-slate-50 dark:bg-slate-900 border p-3 rounded-xl text-sm font-mono">
-                    <button @click="addTransaction" class="col-span-2 md:col-span-6 bg-blue-600 text-white p-3.5 rounded-2xl font-black">寫入資料庫</button>
+                    <button @click="addTransaction" class="col-span-2 md:col-span-6 bg-blue-600 text-white p-3.5 rounded-2xl font-black">寫入系統</button>
                 </div>
             </div>
         </div>
@@ -84,9 +86,9 @@
                 <div class="lg:col-span-3 bg-slate-100 dark:bg-slate-800 p-5 rounded-[2rem] border flex flex-col">
                     <div class="flex justify-between items-center mb-4"><span class="text-xs font-black text-indigo-600 uppercase">👑 板塊基準 ETF (90D)</span><span class="text-[10px] text-slate-500 bg-white dark:bg-slate-900 px-3 py-1 rounded-lg">{{ getSectorInfo(currentTab).desc }}</span></div>
                     <div class="flex-1 relative w-full h-32 bg-white dark:bg-slate-900 rounded-xl border flex items-center justify-center">
-                        <span v-if="isFetchingHistory" class="text-xs text-slate-400 animate-pulse font-black uppercase">Retrieving Data...</span>
+                        <span v-if="isFetchingHistory" class="text-xs text-slate-400 animate-pulse font-black uppercase">DATA SYNCING...</span>
                         <canvas v-else id="benchmarkChart"></canvas>
-                        <div v-if="!isFetchingHistory && benchmarkHistory.pctChange !== undefined" class="absolute top-3 left-4"><span class="font-black text-lg">{{ benchmarkHistory.symbol }}</span><span class="ml-2 font-mono text-sm font-black" :class="benchmarkHistory.pctChange >= 0 ? 'text-up' : 'text-down'">{{ benchmarkHistory.pctChange >= 0 ? '+' : '' }}{{ benchmarkHistory.pctChange }}%</span></div>
+                        <div v-if="!isFetchingHistory && benchmarkHistory.symbol" class="absolute top-3 left-4"><span class="font-black text-lg">{{ benchmarkHistory.symbol }}</span><span class="ml-2 font-mono text-sm font-black" :class="benchmarkHistory.pctChange >= 0 ? 'text-up' : 'text-down'">{{ benchmarkHistory.pctChange >= 0 ? '+' : '' }}{{ benchmarkHistory.pctChange }}%</span></div>
                     </div>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border lg:col-span-1 flex flex-col">
@@ -99,25 +101,25 @@
         </div>
 
         <div class="bg-white dark:bg-slate-800 rounded-[2rem] border shadow-sm mb-6">
-            <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b flex justify-between items-center"><span class="font-black text-xs uppercase text-slate-500">💼 {{ currentTab }} 持倉雷達</span><button v-if="currentTab === '全局'" @click="scanAllQuantRisk" :disabled="isScanningAll" class="bg-indigo-600 text-white text-[11px] font-black px-4 py-2 rounded-xl">🚀 委員會深度掃描</button></div>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm min-w-[1000px]"><thead class="bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-left"><tr><th class="p-4">標的</th><th class="p-4 text-right">現價</th><th class="p-4 text-right">未實現損益</th><th class="p-4">🎯 敘事與催化</th><th class="p-4">🛡️ 行動指令</th></tr></thead><tbody class="divide-y">
-                    <tr v-for="h in filteredHoldings" :key="h.symbol" class="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-                        <td class="p-4 font-black text-lg">{{ h.symbol }}<div class="text-[9px] text-slate-400">{{ h.shares }} 股</div></td>
+            <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b flex justify-between items-center"><span class="font-black text-xs uppercase text-slate-500 tracking-widest">💼 {{ currentTab }} 持倉雷達</span><button v-if="currentTab === '全局'" @click="scanAllQuantRisk" :disabled="isScanningAll" class="bg-indigo-600 text-white text-[11px] font-black px-4 py-2 rounded-xl">🚀 執行委員會深度掃描</button></div>
+            <div class="overflow-x-auto no-scrollbar">
+                <table class="w-full text-sm min-w-[1000px]"><thead class="bg-slate-50 dark:bg-slate-900 text-[10px] font-bold text-left"><tr><th class="p-4">標的</th><th class="p-4 text-right">現價</th><th class="p-4 text-right">損益</th><th class="p-4">🎯 委員會評分</th><th class="p-4">🛡️ 行動指令</th></tr></thead><tbody class="divide-y">
+                    <tr v-for="h in filteredHoldings" :key="h.symbol" class="hover:bg-slate-50 transition">
+                        <td class="p-4 font-black text-lg">{{ h.symbol }}<div class="text-[9px] text-slate-400 uppercase font-mono">{{ h.shares }} 股 | {{ h.sector }}</div></td>
                         <td class="p-4 text-right font-mono font-bold">${{ formatCurrency(h.currentPrice, 2) }}</td>
                         <td class="p-4 text-right font-black font-mono" :class="h.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">${{ formatCurrency(h.unrealizedPnL, 0) }}</td>
-                        <td class="p-4 w-56"><div v-if="quantData[h.symbol]"><div class="flex justify-between text-[9px] font-bold mb-0.5"><span>敘事</span><span>{{quantData[h.symbol].narrative_score}}%</span></div><div class="progress-bar-bg mb-2"><div class="h-full bg-blue-500" :style="{width: quantData[h.symbol].narrative_score+'%'}"></div></div><div class="flex justify-between text-[9px] font-bold mb-0.5"><span>催化劑</span><span>{{quantData[h.symbol].catalyst_prob}}%</span></div><div class="progress-bar-bg"><div class="h-full bg-red-500" :style="{width: quantData[h.symbol].catalyst_prob+'%'}"></div></div></div><span v-else class="text-[10px] text-slate-400 italic">等待掃描...</span></td>
-                        <td class="p-4 w-48"><div v-if="quantData[h.symbol]"><div class="text-[10px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/30 p-2 rounded-lg leading-snug">{{quantData[h.symbol].action_zone}}</div></div><span v-else class="text-[10px] text-slate-400 italic">-</span></td>
+                        <td class="p-4 w-64"><div v-if="quantData[h.symbol]"><div class="flex justify-between text-[9px] font-bold mb-0.5"><span>敘事</span><span>{{quantData[h.symbol].narrative_score}}%</span></div><div class="progress-bar-bg mb-2"><div class="h-full bg-blue-500" :style="{width: quantData[h.symbol].narrative_score+'%'}"></div></div><div class="flex justify-between text-[9px] font-bold mb-0.5"><span>催化劑</span><span>{{quantData[h.symbol].catalyst_prob}}%</span></div><div class="progress-bar-bg"><div class="h-full bg-red-500" :style="{width: quantData[h.symbol].catalyst_prob+'%'}"></div></div></div><span v-else class="text-[10px] text-slate-400 italic">等待掃描...</span></td>
+                        <td class="p-4 w-64"><div v-if="quantData[h.symbol]"><div class="text-[10px] font-black text-amber-600 bg-amber-50 dark:bg-amber-900/30 p-2 rounded-lg">{{quantData[h.symbol].action_zone}}</div></div><span v-else class="text-[10px] text-slate-400 italic">-</span></td>
                     </tr>
                 </tbody></table>
             </div>
         </div>
 
         <div v-show="currentTab !== '全局'" class="bg-white dark:bg-slate-800 rounded-[2rem] border p-5 mb-6">
-            <h3 class="font-black text-xs uppercase text-slate-500 mb-4 flex items-center gap-2 tracking-widest">📰 板塊催化劑流 (每持股 5 則)</h3>
+            <h3 class="font-black text-xs uppercase text-slate-500 mb-4 flex items-center gap-2 tracking-widest">📰 板塊催化劑流 (每持股 5 則最新訊號) <span v-if="isFetchingNews" class="animate-pulse text-blue-500 font-black">SCANNING...</span></h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <a v-for="(news, i) in sectorNews" :key="i" :href="news.link" target="_blank" class="block p-4 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 rounded-2xl border transition">
-                    <div class="flex items-start gap-3"><span class="bg-indigo-600 text-white px-2 py-0.5 rounded text-[10px] font-black shrink-0">{{ news.symbol }}</span><div><p class="text-sm font-bold text-slate-800 dark:text-slate-200 leading-snug">{{ news.title }}</p><p class="text-[10px] text-slate-400 mt-2 uppercase font-mono">{{ new Date(news.pubDate).toLocaleDateString() }}</p></div></div>
+                    <div class="flex items-start gap-3"><span class="bg-indigo-600 text-white px-2 py-0.5 rounded text-[10px] font-black shrink-0">{{ news.symbol }}</span><div><p class="text-sm font-bold text-slate-800 dark:text-slate-200 leading-snug">{{ news.title }}</p><p class="text-[10px] text-slate-400 mt-2 font-mono uppercase">{{ new Date(news.pubDate).toLocaleDateString() }}</p></div></div>
                 </a>
             </div>
         </div>
@@ -125,12 +127,12 @@
 
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         <div v-if="showCopilot" class="bg-white dark:bg-slate-800 w-[350px] h-[450px] mb-4 rounded-3xl shadow-2xl border flex flex-col overflow-hidden">
-            <div class="bg-slate-900 p-4 flex justify-between items-center text-white font-black">🤖 Qwen Copilot<button @click="showCopilot = false">&times;</button></div>
+            <div class="bg-slate-900 p-4 flex justify-between items-center text-white font-black text-sm">🤖 Qwen Copilot<button @click="showCopilot = false" class="text-xl">&times;</button></div>
             <div class="flex-1 p-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 text-sm no-scrollbar" id="chat-box">
                 <div v-for="(msg, i) in chatHistory" :key="i" class="mb-3" :class="msg.role==='user'?'text-right':'text-left'"><div class="inline-block p-3 rounded-2xl" :class="msg.role==='user'?'bg-blue-600 text-white':'bg-white dark:bg-slate-800 border'" v-html="marked.parse(msg.text)"></div></div>
-                <div v-if="isChatting" class="text-blue-500 font-black text-[9px] animate-pulse">COMMITTEE DISCUSSING...</div>
+                <div v-if="isChatting" class="text-blue-500 font-black text-[9px] animate-pulse">THINKING...</div>
             </div>
-            <div class="p-3 bg-white dark:bg-slate-800 border-t flex gap-2"><input v-model="chatInput" @keyup.enter="sendChat" placeholder="詢問策略..." class="flex-1 bg-slate-50 dark:bg-slate-900 border rounded-xl px-3 outline-none text-sm"><button @click="sendChat" class="bg-slate-900 text-white rounded-xl px-4 py-2 font-black">→</button></div>
+            <div class="p-3 bg-white dark:bg-slate-800 border-t flex gap-2"><input v-model="chatInput" @keyup.enter="sendChat" placeholder="詢問策略..." class="flex-1 bg-slate-50 border rounded-xl px-3 outline-none text-sm"><button @click="sendChat" class="bg-slate-900 text-white rounded-xl px-4 py-2 font-black">→</button></div>
         </div>
         <button @click="showCopilot = !showCopilot" class="w-14 h-14 bg-slate-900 text-white rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition focus:outline-none">💬</button>
     </div>
@@ -139,539 +141,197 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
+// 🔴 請務必更換為您的 GAS API URL
 const API_URL = 'https://script.google.com/macros/s/AKfycbyMq3XEjv4xWYmeeEPGZj4IV-3YPbtLW80y6XROe0oucOzbtinBoJ09vGytM_6YurE7/exec'; 
 
 createApp({
-  setup() {
-    // ---------- Safe localStorage ----------
-    const safeGet = (k, fallback = '') => {
-      try { return localStorage.getItem(k) || fallback; } catch (e) { return fallback; }
-    };
-    const safeSet = (k, v) => {
-      try { localStorage.setItem(k, v); } catch (e) {}
-    };
+    setup() {
+        const transactions = ref([]); const marketData = ref({}); const navHistoryData = ref([]); 
+        const quantData = reactive({}); const isSyncing = ref(false); const isScanningAll = ref(false); const isReorganizing = ref(false);
+        const isFetchingHistory = ref(false); const benchmarkHistory = reactive({ symbol: '', prices: [], pctChange: 0 });
+        let benchChartInstance = null; let pieChart = null; let lineChart = null;
+        
+        // 🟢 容錯的 localStorage 讀取
+        const safeGet = (key) => { try { return localStorage.getItem(key) || ''; } catch(e) { return ''; } };
+        const safeSet = (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} };
 
-    // ---------- State ----------
-    const transactions = ref([]);
-    const marketData = ref({});
-    const navHistoryData = ref([]);
-    const quantData = reactive({});
-    const isSyncing = ref(false);
-    const isScanningAll = ref(false);
-    const isReorganizing = ref(false);
+        const password = ref(safeGet('p_pass'));
+        const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
+        const currentTab = ref('全局');
 
-    const isFetchingHistory = ref(false);
-    const benchmarkHistory = reactive({ symbol: '', prices: [], pctChange: undefined });
+        // 🟢 核心變數完整回歸
+        const showCopilot = ref(false); const chatInput = ref(''); const chatHistory = ref([]); const isChatting = ref(false);
+        const aiSectorMap = ref({}); const dynamicBenchmarks = ref({}); const sectorNews = ref([]); const isFetchingNews = ref(false);
 
-    let benchChartInstance = null;
-    let pieChart = null;
-    let lineChart = null;
+        const getSectorETF = (s) => (dynamicBenchmarks.value[s]?.etf) || null;
+        const getSectorGainers = (s) => (dynamicBenchmarks.value[s]?.top_gainers) || [];
+        const getSectorInfo = (s) => (dynamicBenchmarks.value[s]?.desc) ? { desc: dynamicBenchmarks.value[s].desc } : { desc: '請點擊智能分類' };
 
-    const password = ref(safeGet('p_pass', ''));
-
-    const form = reactive({
-      date: new Date().toISOString().split('T')[0],
-      type: 'buy',
-      symbol: '',
-      price: '',
-      shares: ''
-    });
-
-    const currentTab = ref('全局');
-
-    const showCopilot = ref(false);
-    const chatInput = ref('');
-    const chatHistory = ref([]);
-    const isChatting = ref(false);
-
-    const aiSectorMap = ref({});
-    const dynamicBenchmarks = ref({});
-    const sectorNews = ref([]);
-    const isFetchingNews = ref(false);
-
-    // marked fallback：避免 CDN 失敗就白屏
-    const markedSafe = (window.marked && window.marked.parse)
-      ? window.marked
-      : { parse: (s) => (s || '') };
-
-    // ---------- Helpers (避免 optional chaining 造成舊 WebView 語法炸裂) ----------
-    const getBenchObj = (s) => {
-      const db = dynamicBenchmarks.value || {};
-      return db[s] ? db[s] : null;
-    };
-    const getSectorETF = (s) => {
-      const o = getBenchObj(s);
-      return (o && o.etf) ? o.etf : null;
-    };
-    const getSectorGainers = (s) => {
-      const o = getBenchObj(s);
-      return (o && o.top_gainers) ? o.top_gainers : [];
-    };
-    const getSectorInfo = (s) => {
-      const o = getBenchObj(s);
-      return (o && o.desc) ? { desc: o.desc } : { desc: '請點擊 [AI智能分類]' };
-    };
-
-    const formatCurrency = (v, d = 0) => {
-      const n = Number(v);
-      return (Number.isFinite(n) ? n : 0).toLocaleString('en-US', {
-        minimumFractionDigits: d,
-        maximumFractionDigits: d
-      });
-    };
-
-    const checkPassword = () => {
-      if (!password.value) {
-        const p = prompt('密碼:');
-        if (!p) return false;
-        password.value = p;
-        safeSet('p_pass', p);
-      }
-      return true;
-    };
-
-    // ---------- API ----------
-    const fetchData = async (forceAlert = false) => {
-      if (!checkPassword()) return;
-      isSyncing.value = true;
-
-      try {
-        const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
-        const d = await res.json();
-
-        transactions.value = d.transactions || [];
-        marketData.value = d.marketData || {};
-        navHistoryData.value = d.navHistory || [];
-
-        aiSectorMap.value = d.aiSectorMap || {};
-        dynamicBenchmarks.value = d.dynamicBenchmarks || {};
-
-        // 先清空再灌入，避免舊 key 殘留
-        Object.keys(quantData).forEach(k => delete quantData[k]);
-        Object.assign(quantData, d.quantData || {});
-
-        safeSet('app_cache', JSON.stringify({
-          transactions: transactions.value,
-          marketData: marketData.value,
-          navHistoryData: navHistoryData.value,
-          aiSectorMap: aiSectorMap.value,
-          dynamicBenchmarks: dynamicBenchmarks.value,
-          quantData: quantData
-        }));
-      } catch (e) {
-        if (forceAlert) alert('同步失敗');
-      } finally {
-        isSyncing.value = false;
-      }
-    };
-
-    // ✅ 補上 saveData：你原本沒定義，這就是白屏根因
-    // 這裡做「最小可用」儲存：把交易/量化/板塊資訊丟回去（後端若不支援會回 error）
-    const saveData = async (forceAlert = true) => {
-      if (!checkPassword()) return;
-
-      try {
-        const payload = {
-          transactions: transactions.value,
-          quantData: quantData,
-          aiSectorMap: aiSectorMap.value,
-          dynamicBenchmarks: dynamicBenchmarks.value
+        const fetchData = async (force) => {
+            if (!password.value) { const p = prompt('請輸入管理密碼:'); if(p) { password.value = p; safeSet('p_pass', p); } else return; }
+            isSyncing.value = true;
+            try {
+                const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
+                const d = await res.json();
+                if(d.status === 'error') throw new Error(d.message);
+                transactions.value = d.transactions||[]; marketData.value = d.marketData||{}; navHistoryData.value = d.navHistory||[]; 
+                aiSectorMap.value = d.aiSectorMap||{}; dynamicBenchmarks.value = d.dynamicBenchmarks||{};
+                if(d.quantData) Object.assign(quantData, d.quantData);
+                safeSet('app_cache', JSON.stringify({transactions: d.transactions, marketData: d.marketData, aiSectorMap: d.aiSectorMap, dynamicBenchmarks: d.dynamicBenchmarks, navHistory: d.navHistory}));
+            } catch (e) { if(force) alert("同步失敗: " + e.message); } finally { isSyncing.value = false; }
         };
 
-        const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, {
-          method: 'POST',
-          body: JSON.stringify(payload)
+        // 🟢 補全遺漏的 saveData 函數 (白屏元兇 #1)
+        const saveData = async () => {
+            if (!password.value) return alert('請先登入');
+            if (!confirm('確認同步到 Google Sheets？')) return;
+            try {
+                const payload = { transactions: transactions.value, currentNav: dashboard.value.totalNav, quantData: quantData };
+                const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, { method: 'POST', body: JSON.stringify(payload) });
+                const d = await res.json();
+                if(d.status === 'success') { alert('雲端儲存成功'); fetchData(false); } else { throw new Error(d.message); }
+            } catch(e) { alert('儲存失敗：' + e.message); }
+        };
+
+        onMounted(() => { 
+            const c = safeGet('app_cache'); if(c){ try { const p=JSON.parse(c); transactions.value=p.transactions||[]; marketData.value=p.marketData||{}; aiSectorMap.value=p.aiSectorMap||{}; dynamicBenchmarks.value=p.dynamicBenchmarks||{}; navHistoryData.value=p.navHistory||[]; } catch(e){} }
+            if(password.value) fetchData(false); if(safeGet('theme')==='dark') document.documentElement.classList.add('dark');
         });
-        const d = await res.json();
-        if (d && d.status === 'error') throw new Error(d.message || 'save error');
 
-        if (forceAlert) alert('已儲存');
-        await fetchData(false);
-      } catch (e) {
-        if (forceAlert) alert(`儲存失敗: ${e.message}`);
-      }
-    };
-
-    // ---------- Lifecycle ----------
-    onMounted(() => {
-      const c = safeGet('app_cache', '');
-      if (c) {
-        try {
-          const p = JSON.parse(c);
-          transactions.value = p.transactions || [];
-          marketData.value = p.marketData || {};
-          navHistoryData.value = p.navHistoryData || [];
-          aiSectorMap.value = p.aiSectorMap || {};
-          dynamicBenchmarks.value = p.dynamicBenchmarks || {};
-          if (p.quantData) Object.assign(quantData, p.quantData);
-        } catch (e) {}
-      }
-
-      if (safeGet('theme', '') === 'dark') document.documentElement.classList.add('dark');
-      if (password.value) fetchData(false);
-    });
-
-    const toggleDarkMode = () => {
-      document.documentElement.classList.toggle('dark');
-      safeSet('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
-      renderGlobalCharts();
-      if (currentTab.value !== '全局') renderBenchmarkChart(); // 讓 sector 圖跟著變
-    };
-
-    // ---------- Computed ----------
-    const dashboard = computed(() => {
-      let cash = 100000; // 你原本寫死的起始現金（如要改成後端帶回可再擴充）
-      const holdings = {};
-      let investedAmount = 0;
-      let totalUnrealized = 0;
-
-      (transactions.value || []).forEach(t => {
-        const sym = String(t.symbol || '').toUpperCase().trim();
-        if (!sym) return;
-
-        const type = String(t.type || 'buy').toLowerCase();
-        const price = Number(t.price) || 0;
-        const shares = Number(t.shares) || 0;
-
-        const sector = (aiSectorMap.value && aiSectorMap.value[sym]) ? aiSectorMap.value[sym] : '📁 未分類';
-
-        if (!holdings[sym]) holdings[sym] = { symbol: sym, sector, shares: 0, totalCost: 0 };
-
-        const h = holdings[sym];
-
-        if (type === 'buy') {
-          h.totalCost += price * shares;
-          h.shares += shares;
-          cash -= price * shares;
-        } else {
-          const avgCost = h.shares > 0 ? (h.totalCost / h.shares) : 0;
-          h.totalCost -= avgCost * shares;
-          h.shares -= shares;
-          cash += price * shares;
-
-          // 防呆：不讓負數/NaN
-          if (h.shares < 0) { h.shares = 0; h.totalCost = 0; }
-          if (!Number.isFinite(h.totalCost) || h.totalCost < 0) h.totalCost = 0;
-        }
-      });
-
-      Object.keys(holdings).forEach(sym => {
-        const h = holdings[sym];
-        if (h.shares > 0) {
-          const cur = (marketData.value && marketData.value[sym] && marketData.value[sym].price)
-            ? Number(marketData.value[sym].price)
-            : 0;
-          h.currentPrice = cur;
-          h.unrealizedPnL = cur * h.shares - h.totalCost;
-
-          investedAmount += h.totalCost;
-          totalUnrealized += h.unrealizedPnL;
-        }
-      });
-
-      const totalNav = cash + investedAmount + totalUnrealized;
-      return { cash, holdings, investedAmount, totalUnrealized, totalNav };
-    });
-
-    const top5Holdings = computed(() => {
-      const nav = dashboard.value.totalNav;
-      if (!nav) return [];
-
-      return Object.values(dashboard.value.holdings)
-        .filter(h => h.shares > 0)
-        .map(h => {
-          const val = (h.shares || 0) * (h.currentPrice || 0);
-          return {
-            symbol: h.symbol,
-            val,
-            weight: ((val / nav) * 100).toFixed(1),
-            unrealizedPnL: (h.unrealizedPnL || 0)
-          };
-        })
-        .sort((a, b) => b.val - a.val)
-        .slice(0, 5);
-    });
-
-    const sectorList = computed(() => {
-      const s = {};
-      Object.values(dashboard.value.holdings).forEach(h => {
-        if (h.shares > 0) s[h.sector] = (s[h.sector] || 0) + 1;
-      });
-      return Object.keys(s).map(n => ({ name: n, count: s[n] })).sort((a, b) => b.count - a.count);
-    });
-
-    const filteredHoldings = computed(() => {
-      const all = Object.values(dashboard.value.holdings).filter(h => h.shares > 0);
-      return currentTab.value === '全局' ? all : all.filter(h => h.sector === currentTab.value);
-    });
-
-    const currentSectorStats = computed(() => {
-      if (currentTab.value === '全局' || !filteredHoldings.value.length) return null;
-      let tv = 0, tn = 0, tc = 0, count = 0;
-
-      filteredHoldings.value.forEach(h => {
-        tv += h.shares * h.currentPrice;
-        if (quantData[h.symbol]) {
-          tn += Number(quantData[h.symbol].narrative_score || 0);
-          tc += Number(quantData[h.symbol].catalyst_prob || 0);
-          count++;
-        }
-      });
-
-      return {
-        weightPercent: dashboard.value.totalNav > 0 ? ((tv / dashboard.value.totalNav) * 100).toFixed(1) : '0.0',
-        avgNarrative: count ? Math.round(tn / count) : 0,
-        avgCatalyst: count ? Math.round(tc / count) : 0
-      };
-    });
-
-    // ---------- Charts ----------
-    const renderGlobalCharts = () => {
-      if (currentTab.value !== '全局') return;
-      if (typeof Chart === 'undefined') return;
-
-      setTimeout(() => {
-        const ctxP = document.getElementById('allocationChart');
-        if (ctxP) {
-          if (pieChart) pieChart.destroy();
-          pieChart = new Chart(ctxP, {
-            type: 'doughnut',
-            data: {
-              labels: top5Holdings.value.map(h => h.symbol),
-              datasets: [{
-                data: top5Holdings.value.map(h => h.val),
-                backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#ec4899']
-              }]
-            },
-            options: { cutout: '80%', plugins: { legend: { display: false } } }
-          });
-        }
-
-        const ctxL = document.getElementById('navChart');
-        if (ctxL) {
-          if (lineChart) lineChart.destroy();
-          lineChart = new Chart(ctxL, {
-            type: 'line',
-            data: {
-              labels: (navHistoryData.value || []).map(h => h.date),
-              datasets: [{
-                data: (navHistoryData.value || []).map(h => h.nav),
-                borderColor: '#8b5cf6',
-                fill: false,
-                tension: 0.4
-              }]
-            },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-          });
-        }
-      }, 150);
-    };
-
-    const renderBenchmarkChart = () => {
-      if (currentTab.value === '全局') return;
-      if (typeof Chart === 'undefined') return;
-
-      const ctx = document.getElementById('benchmarkChart');
-      if (!ctx) return;
-
-      if (benchChartInstance) benchChartInstance.destroy();
-      if (!benchmarkHistory.prices || benchmarkHistory.prices.length === 0) return;
-
-      const color = (benchmarkHistory.pctChange || 0) >= 0 ? '#10b981' : '#ef4444';
-      benchChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: benchmarkHistory.prices.map((_, i) => i),
-          datasets: [{
-            data: benchmarkHistory.prices,
-            borderColor: color,
-            backgroundColor: color + '1A',
-            fill: true,
-            pointRadius: 0,
-            tension: 0.1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: { x: { display: false }, y: { display: false } },
-          layout: { padding: { top: 40 } }
-        }
-      });
-    };
-
-    watch(() => [dashboard.value.holdings, navHistoryData.value, currentTab.value], () => {
-      renderGlobalCharts();
-    }, { deep: true });
-
-    // ---------- Tab watcher ----------
-    watch(currentTab, async (newTab) => {
-      if (newTab === '全局') return;
-      if (!checkPassword()) return;
-
-      // 1) benchmark history
-      const etf = getSectorETF(newTab);
-      if (!etf) {
-        benchmarkHistory.symbol = '';
-        benchmarkHistory.prices = [];
-        benchmarkHistory.pctChange = undefined;
-        if (benchChartInstance) { benchChartInstance.destroy(); benchChartInstance = null; }
-      } else {
-        isFetchingHistory.value = true;
-        try {
-          const res = await fetch(`${API_URL}?action=get_history&symbols=${encodeURIComponent(JSON.stringify([etf]))}&password=${encodeURIComponent(password.value)}`);
-          const d = await res.json();
-          if (d && d.data && d.data[etf]) {
-            benchmarkHistory.symbol = etf;
-            benchmarkHistory.prices = d.data[etf].prices || [];
-            benchmarkHistory.pctChange = d.data[etf].pctChange;
-          }
-        } catch (e) {
-          // ignore
-        } finally {
-          isFetchingHistory.value = false;
-          await nextTick();     // ✅ 等 canvas 出現再畫
-          renderBenchmarkChart();
-        }
-      }
-
-      // 2) sector news
-      sectorNews.value = [];
-      isFetchingNews.value = true;
-      try {
-        for (const h of filteredHoldings.value) {
-          const rss = 'https://news.google.com/rss/search?q=' + encodeURIComponent(h.symbol + ' stock news') + '&hl=en-US&gl=US&ceid=US:en';
-          const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}`);
-          const d = await res.json();
-          if (d && d.items) {
-            d.items.slice(0, 5).forEach(item => {
-              sectorNews.value.push({ symbol: h.symbol, title: item.title, link: item.link, pubDate: item.pubDate });
+        const dashboard = computed(() => {
+            let cash = 100000, holdings = {}, investedValue = 0, totalUnrealized = 0;
+            transactions.value.forEach(t => {
+                const s = t.symbol.toUpperCase();
+                if(!holdings[s]) holdings[s] = {symbol:s, shares:0, totalCost:0};
+                if(t.type==='buy') { holdings[s].shares += Number(t.shares); holdings[s].totalCost += t.price*t.shares; cash -= t.price*t.shares; }
+                else { holdings[s].shares -= Number(t.shares); holdings[s].totalCost -= (holdings[s].totalCost/holdings[s].shares||0)*t.shares; cash += t.price*t.shares; }
             });
-          }
-        }
-        sectorNews.value.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-      } catch (e) {
-        // ignore
-      } finally {
-        isFetchingNews.value = false;
-      }
-    });
+            Object.keys(holdings).forEach(s => {
+                const h = holdings[s]; if(h.shares > 0) {
+                    const cur = marketData.value[s]?.price || 0; h.currentPrice = cur;
+                    h.unrealizedPnL = (cur * h.shares) - h.totalCost;
+                    investedValue += (cur * h.shares); totalUnrealized += h.unrealizedPnL;
+                    h.sector = aiSectorMap.value[s] || '📁 未分類';
+                }
+            });
+            return { cash, holdings, investedValue, totalUnrealized, totalNav: cash + investedValue };
+        });
 
-    // ---------- Actions ----------
-    const scanAllQuantRisk = async () => {
-      if (!checkPassword()) return;
-      isScanningAll.value = true;
+        const top5Holdings = computed(() => {
+            if(!dashboard.value.totalNav || dashboard.value.totalNav === 0) return [];
+            return Object.values(dashboard.value.holdings).filter(h => h.shares > 0)
+                .map(h => ({ symbol: h.symbol, val: h.shares*h.currentPrice, weight: ((h.shares*h.currentPrice)/dashboard.value.totalNav*100).toFixed(1), unrealizedPnL: h.unrealizedPnL }))
+                .sort((a,b) => b.val - a.val).slice(0, 5);
+        });
 
-      const syms = Object.keys(dashboard.value.holdings).filter(s => dashboard.value.holdings[s].shares > 0);
-      for (const s of syms) {
-        quantData[s] = { action_zone: '🚀 Agent 激辯中...' };
-        try {
-          const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify([s]))}&password=${encodeURIComponent(password.value)}`);
-          const d = await r.json();
-          if (d && d.status === 'success' && d.data && d.data[s]) quantData[s] = d.data[s];
-        } catch (e) {
-          quantData[s] = { action_zone: '⚠️ 連線中斷' };
-        }
-      }
+        const sectorList = computed(() => {
+            const s = {}; Object.values(dashboard.value.holdings).forEach(h => { if(h.shares > 0) s[h.sector] = (s[h.sector]||0) + 1; });
+            return Object.keys(s).map(n => ({ name: n, count: s[n] })).sort((a,b)=>b.count-a.count);
+        });
 
-      isScanningAll.value = false;
-    };
+        const filteredHoldings = computed(() => {
+            const all = Object.values(dashboard.value.holdings).filter(h => h.shares > 0);
+            return currentTab.value === '全局' ? all : all.filter(h => h.sector === currentTab.value);
+        });
 
-    const sendChat = async () => {
-      if (!chatInput.value.trim() || isChatting.value) return;
-      if (!checkPassword()) return;
+        const currentSectorStats = computed(() => {
+            if (currentTab.value === '全局' || !filteredHoldings.value.length || !dashboard.value.totalNav) return null;
+            let tv = 0, tn = 0, tc = 0, count = 0;
+            filteredHoldings.value.forEach(h => {
+                tv += h.shares * h.currentPrice;
+                if (quantData[h.symbol]) { tn += (quantData[h.symbol].narrative_score||0); tc += (quantData[h.symbol].catalyst_prob||0); count++; }
+            });
+            return { weightPercent: ((tv/dashboard.value.totalNav)*100).toFixed(1), avgNarrative: count?Math.round(tn/count):0, avgCatalyst: count?Math.round(tc/count):0 };
+        });
 
-      const text = chatInput.value;
-      chatHistory.value.push({ role: 'user', text });
-      chatInput.value = '';
-      isChatting.value = true;
+        const renderChart = () => {
+            if(currentTab.value!=='全局') return;
+            setTimeout(() => {
+                const ctxP = document.getElementById('allocationChart');
+                if(ctxP) {
+                    if(pieChart) pieChart.destroy();
+                    pieChart = new Chart(ctxP, { type:'doughnut', data:{ labels: top5Holdings.value.map(h=>h.symbol), datasets:[{data:top5Holdings.value.map(h=>h.val), backgroundColor:['#6366f1','#10b981','#f59e0b','#ef4444','#ec4899']}] }, options:{ cutout:'80%', plugins:{legend:{display:false}} } });
+                }
+                const ctxL = document.getElementById('navChart');
+                if(ctxL && navHistoryData.value.length) {
+                    if(lineChart) lineChart.destroy();
+                    lineChart = new Chart(ctxL, { type:'line', data:{ labels:navHistoryData.value.map(h=>h.date), datasets:[{data:navHistoryData.value.map(h=>h.nav), borderColor:'#8b5cf6', tension:0.4}] }, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} } });
+                }
+            }, 200);
+        };
+        watch(() => [dashboard.value.holdings, currentTab.value], renderChart, { deep: true });
 
-      try {
-        const r = await fetch(`${API_URL}?action=copilot&msg=${encodeURIComponent(text)}&context=${encodeURIComponent('NAV:' + dashboard.value.totalNav)}&password=${encodeURIComponent(password.value)}`);
-        const d = await r.json();
-        chatHistory.value.push({ role: 'ai', text: (d && d.reply) ? d.reply : '無回覆' });
-      } catch (e) {
-        chatHistory.value.push({ role: 'ai', text: '超時' });
-      } finally {
-        isChatting.value = false;
-      }
-    };
+        watch(currentTab, async (newTab) => {
+            if(newTab==='全局') return;
+            const etf = getSectorETF(newTab);
+            if(etf) {
+                isFetchingHistory.value = true;
+                try {
+                    const res = await fetch(`${API_URL}?action=get_history&symbols=${encodeURIComponent(JSON.stringify([etf]))}&password=${encodeURIComponent(password.value)}`);
+                    const d = await res.json();
+                    if(d.data && d.data[etf]) { 
+                        benchmarkHistory.symbol=etf; benchmarkHistory.prices=d.data[etf].prices; benchmarkHistory.pctChange=d.data[etf].pctChange; 
+                        nextTick(() => {
+                            const ctx = document.getElementById('benchmarkChart'); if(!ctx) return;
+                            if(benchChartInstance) benchChartInstance.destroy();
+                            const color = benchmarkHistory.pctChange >= 0 ? '#10b981' : '#ef4444';
+                            benchChartInstance = new Chart(ctx, { type: 'line', data: { labels: benchmarkHistory.prices.map((_,i)=>i), datasets:[{data:benchmarkHistory.prices, borderColor:color, backgroundColor:color+'1A', fill:true, pointRadius:0, tension:0.1}] }, options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{x:{display:false},y:{display:false}}, layout:{padding:{top:40}} } });
+                        });
+                    }
+                } catch(e) {} finally { isFetchingHistory.value = false; }
+            }
+            sectorNews.value = []; isFetchingNews.value = true;
+            try {
+                for(const h of filteredHoldings.value) {
+                    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent('https://news.google.com/rss/search?q='+h.symbol+'+stock+news&hl=en-US&gl=US&ceid=US:en')}`);
+                    const d = await res.json(); if(d.items) d.items.slice(0,5).forEach(item => sectorNews.value.push({symbol:h.symbol, title:item.title, link:item.link, pubDate:item.pubDate}));
+                }
+                sectorNews.value.sort((a,b)=>new Date(b.pubDate)-new Date(a.pubDate));
+            } catch(e) {} finally { isFetchingNews.value = false; }
+        });
 
-    const runAutoSectorMap = async () => {
-      if (!checkPassword()) return;
-      isReorganizing.value = true;
-      try {
-        await fetch(`${API_URL}?action=auto_sector_map&password=${encodeURIComponent(password.value)}`);
-        await fetchData(false);
-      } catch (e) {
-        // ignore
-      } finally {
-        isReorganizing.value = false;
-      }
-    };
+        const scanAllQuantRisk = async () => {
+            if(!password.value) return;
+            isScanningAll.value = true;
+            const syms = Object.keys(dashboard.value.holdings).filter(s => dashboard.value.holdings[s].shares > 0);
+            for(const s of syms) {
+                quantData[s] = {action_zone: '🚀 委員會辯論中...'};
+                try {
+                    const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify([s]))}&password=${encodeURIComponent(password.value)}`);
+                    const d = await r.json(); if(d.status==='success' && d.data[s]) quantData[s] = d.data[s];
+                } catch(e) { quantData[s].action_zone = '⚠️ 掃描中斷'; }
+            }
+            isScanningAll.value = false;
+        };
 
-    const addTransaction = () => {
-      const sym = String(form.symbol || '').toUpperCase().trim();
-      if (!sym) return;
+        const sendChat = async () => {
+            if(!chatInput.value.trim() || isChatting.value) return;
+            const text = chatInput.value; chatHistory.value.push({role:'user', text}); chatInput.value=''; isChatting.value=true;
+            try {
+                const r = await fetch(`${API_URL}?action=copilot&msg=${encodeURIComponent(text)}&context=NAV:${dashboard.value.totalNav}&password=${encodeURIComponent(password.value)}`);
+                const d = await r.json(); chatHistory.value.push({role:'ai', text: d.reply});
+            } catch(e) { chatHistory.value.push({role:'ai', text: '伺服器繁忙中'}); } finally { isChatting.value = false; }
+        };
 
-      transactions.value.push({
-        id: Date.now(),
-        date: form.date,
-        type: form.type,
-        symbol: sym,
-        price: Number(form.price) || 0,
-        shares: Number(form.shares) || 0
-      });
+        const runAutoSectorMap = async () => {
+            if (!confirm('將動用 Qwen 重新分類板塊與龍頭？')) return;
+            isReorganizing.value = true;
+            try { await fetch(`${API_URL}?action=auto_sector_map&password=${encodeURIComponent(password.value)}`); await fetchData(false); }
+            catch(e) {} finally { isReorganizing.value = false; }
+        };
 
-      form.symbol = '';
-      form.price = '';
-      form.shares = '';
-    };
+        const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); safeSet('theme', document.documentElement.classList.contains('dark')?'dark':'light'); renderChart(); };
 
-    return {
-      dashboard,
-      form,
-      transactions,
-      quantData,
-
-      isSyncing,
-      isScanningAll,
-      isReorganizing,
-
-      currentTab,
-      sectorList,
-      filteredHoldings,
-      currentSectorStats,
-
-      getSectorETF,
-      getSectorGainers,
-      getSectorInfo,
-
-      sectorNews,
-      isFetchingNews,
-
-      isFetchingHistory,
-      benchmarkHistory,
-      top5Holdings,
-
-      showCopilot,
-      chatInput,
-      chatHistory,
-      isChatting,
-
-      fetchData,
-      saveData,         // ✅ 現在有定義了，不會白屏
-      toggleDarkMode,
-      addTransaction,
-      runAutoSectorMap,
-      scanAllQuantRisk,
-      sendChat,
-
-      formatCurrency,
-      marked: markedSafe
-    };
-  }
+        return {
+            dashboard, form, transactions, quantData, isSyncing, isScanningAll, isReorganizing, currentTab, sectorList, filteredHoldings, 
+            currentSectorStats, getSectorETF, getSectorGainers, getSectorInfo, sectorNews, isFetchingNews, isFetchingHistory, benchmarkHistory, top5Holdings,
+            showCopilot, chatInput, chatHistory, isChatting, fetchData, saveData, runAutoSectorMap, scanAllQuantRisk, sendChat, marked, toggleDarkMode,
+            addTransaction: () => { if(form.symbol) { transactions.value.push({id:Date.now(), ...form, symbol:form.symbol.toUpperCase()}); form.symbol=''; } },
+            removeTransaction: (id) => { if(confirm('刪除交易？')) transactions.value = transactions.value.filter(t=>t.id!==id); },
+            formatCurrency: (v,d=0)=> (v||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d}),
+            filteredTransactions: computed(() => transactions.value.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)))
+        };
+    }
 }).mount('#app');
 </script>
 </body>
