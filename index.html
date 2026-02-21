@@ -21,7 +21,6 @@
         .progress-fill-blue { background: linear-gradient(90deg, #3b82f6, #0ea5e9); }
         .progress-fill-green { background: linear-gradient(90deg, #10b981, #14b8a6); }
         .progress-fill-purple { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
-        /* v4.5 側邊欄專用樣式 */
         .sidebar-item { transition: all 0.2s ease-in-out; border-left: 4px solid transparent; }
         .sidebar-item.active { border-left-color: #6366f1; background-color: rgba(99, 102, 241, 0.1); color: #4f46e5; font-weight: 900; }
         .dark .sidebar-item.active { color: #818cf8; background-color: rgba(99, 102, 241, 0.2); }
@@ -54,7 +53,7 @@
         <div class="text-[10px] font-black uppercase text-slate-400 mb-2 px-3 tracking-widest hidden lg:block">行業板塊拆解</div>
         <div v-for="sector in sectorList" :key="sector.name" @click="currentTab = sector.name" class="sidebar-item cursor-pointer px-3 py-2.5 rounded-lg mb-1 flex justify-between items-center" :class="{'active': currentTab === sector.name}">
             <div class="flex items-center gap-2 truncate">
-                <span class="text-sm">{{ sector.icon }}</span>
+                <span class="text-sm">{{ sector.icon || '💡' }}</span>
                 <span class="text-xs truncate">{{ sector.name }}</span>
             </div>
             <span class="text-[9px] bg-slate-100 dark:bg-slate-800 px-1.5 rounded text-slate-500 font-mono">{{ sector.count }}</span>
@@ -78,14 +77,14 @@
             </div>
         </header>
 
-        <div v-if="currentTab === '全局'">
+        <div v-show="currentTab === '全局'">
             <div class="grid grid-cols-2 lg:grid-cols-7 gap-3 mb-6">
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">可用現金</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard.cash) }} <span @click="showCashModal=true" class="text-[10px] text-blue-500 cursor-pointer underline ml-1">調節</span></p></div>
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">持倉總成本</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard.investedAmount) }}</p></div>
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">已實現損益</p><p class="text-lg lg:text-xl font-black mt-1" :class="dashboard.totalRealized >= 0 ? 'text-up' : 'text-down'">{{ dashboard.totalRealized >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalRealized) }}</p></div>
-                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">未實現損益</p><p class="text-lg lg:text-xl font-black mt-1" :class="dashboard.totalUnrealized >= 0 ? 'text-up' : 'text-down'">{{ dashboard.totalUnrealized >= 0 ? '+' : '' }}${{ formatCurrency(dashboard.totalUnrealized) }}</p></div>
-                <div class="bg-emerald-50 dark:bg-emerald-900/30 p-4 rounded-3xl shadow-sm border border-emerald-100 dark:border-emerald-800"><p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase">預估年領股息</p><p class="text-lg lg:text-xl font-black mt-1 text-emerald-700 dark:text-emerald-300">${{ formatCurrency(dashboard.totalDividend, 0) }}</p></div>
-                <div class="bg-slate-900 dark:bg-black p-4 rounded-3xl shadow-xl col-span-2 flex flex-col justify-center"><p class="text-[10px] text-slate-400 font-bold uppercase">總資產淨值 (NAV)</p><p class="text-2xl lg:text-3xl font-black text-white mt-1">${{ formatCurrency(dashboard.totalNav) }}</p></div>
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">可用現金</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard?.cash) }} <span @click="showCashModal=true" class="text-[10px] text-blue-500 cursor-pointer underline ml-1">調節</span></p></div>
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">持倉總成本</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard?.investedAmount) }}</p></div>
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">已實現損益</p><p class="text-lg lg:text-xl font-black mt-1" :class="(dashboard?.totalRealized || 0) >= 0 ? 'text-up' : 'text-down'">{{ (dashboard?.totalRealized || 0) >= 0 ? '+' : '' }}${{ formatCurrency(dashboard?.totalRealized) }}</p></div>
+                <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">未實現損益</p><p class="text-lg lg:text-xl font-black mt-1" :class="(dashboard?.totalUnrealized || 0) >= 0 ? 'text-up' : 'text-down'">{{ (dashboard?.totalUnrealized || 0) >= 0 ? '+' : '' }}${{ formatCurrency(dashboard?.totalUnrealized) }}</p></div>
+                <div class="bg-emerald-50 dark:bg-emerald-900/30 p-4 rounded-3xl shadow-sm border border-emerald-100 dark:border-emerald-800"><p class="text-[10px] text-emerald-600 dark:text-emerald-400 font-black uppercase">預估年領股息</p><p class="text-lg lg:text-xl font-black mt-1 text-emerald-700 dark:text-emerald-300">${{ formatCurrency(dashboard?.totalDividend, 0) }}</p></div>
+                <div class="bg-slate-900 dark:bg-black p-4 rounded-3xl shadow-xl col-span-2 flex flex-col justify-center"><p class="text-[10px] text-slate-400 font-bold uppercase">總資產淨值 (NAV)</p><p class="text-2xl lg:text-3xl font-black text-white mt-1">${{ formatCurrency(dashboard?.totalNav) }}</p></div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -106,21 +105,20 @@
             </div>
         </div>
 
-        <div v-if="currentTab !== '全局'">
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div v-show="currentTab !== '全局'">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" v-if="currentSectorStats">
                 <div class="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/20 p-5 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-widest mb-1">板塊資金權重</p>
-                    <p class="text-3xl font-black text-indigo-700 dark:text-indigo-300">{{ currentSectorStats.weightPercent }}%</p>
-                    <p class="text-xs font-bold text-indigo-600/70 dark:text-indigo-400/70 mt-1">市值 ${{ formatCurrency(currentSectorStats.totalValue) }}</p>
+                    <p class="text-3xl font-black text-indigo-700 dark:text-indigo-300">{{ currentSectorStats.weightPercent || 0 }}%</p>
+                    <p class="text-xs font-bold text-indigo-600/70 dark:text-indigo-400/70 mt-1">市值 ${{ formatCurrency(currentSectorStats.totalValue || 0) }}</p>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">板塊平均敘事共識</p>
-                    <p class="text-3xl font-black" :class="currentSectorStats.avgNarrative > 70 ? 'text-blue-500' : 'text-slate-600'">{{ currentSectorStats.avgNarrative }}<span class="text-sm ml-1 text-slate-400">/100</span></p>
+                    <p class="text-3xl font-black" :class="(currentSectorStats.avgNarrative || 0) > 70 ? 'text-blue-500' : 'text-slate-600'">{{ currentSectorStats.avgNarrative || 0 }}<span class="text-sm ml-1 text-slate-400">/100</span></p>
                 </div>
                 <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">板塊平均緊缺動能</p>
-                    <p class="text-3xl font-black" :class="currentSectorStats.avgShortage > 70 ? 'text-purple-500' : 'text-slate-600'">{{ currentSectorStats.avgShortage }}<span class="text-sm ml-1 text-slate-400">/100</span></p>
+                    <p class="text-3xl font-black" :class="(currentSectorStats.avgShortage || 0) > 70 ? 'text-purple-500' : 'text-slate-600'">{{ currentSectorStats.avgShortage || 0 }}<span class="text-sm ml-1 text-slate-400">/100</span></p>
                 </div>
             </div>
         </div>
@@ -148,7 +146,7 @@
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
-                        <tr v-for="h in filteredHoldings" :key="h.symbol" class="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                        <tr v-for="h in (filteredHoldings || [])" :key="h.symbol" class="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
                             <td class="p-4 font-black text-lg">
                                 {{ h.symbol }}
                                 <div class="mt-0.5"><span class="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded mr-1">{{ h.sector }}</span><span class="text-[10px] font-normal text-slate-400">{{ h.shares }} 股</span></div>
@@ -156,7 +154,7 @@
                             <td class="p-4 text-right font-mono text-slate-500 dark:text-slate-400">${{ formatCurrency(h.avgCost, 2) }}<span class="block text-[12px] font-bold text-blue-500 dark:text-blue-400">${{ formatCurrency(h.currentPrice, 2) }}</span></td>
                             <td class="p-4 text-right font-black font-mono" :class="h.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">${{ formatCurrency(h.unrealizedPnL, 0) }}<span class="block text-[10px] opacity-70">{{ h.unrealizedPnLPercent }}%</span></td>
                             <td class="p-4">
-                                <div v-if="quantData[h.symbol]">
+                                <div v-if="quantData && quantData[h.symbol]">
                                     <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5"><span>敘事閉環</span><span>{{quantData[h.symbol].narrative_score}}%</span></div>
                                     <div class="progress-bar-bg mb-2"><div class="h-full progress-fill-blue" :style="{width: quantData[h.symbol].narrative_score + '%'}"></div></div>
                                     <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5" :class="quantData[h.symbol].catalyst_prob > 65 ? 'text-red-500' : ''"><span>硬催化劑機率</span><span>{{quantData[h.symbol].catalyst_prob}}%</span></div>
@@ -165,7 +163,7 @@
                                 <span v-else class="text-[10px] text-slate-400 italic">待掃描...</span>
                             </td>
                             <td class="p-4">
-                                <div v-if="quantData[h.symbol]">
+                                <div v-if="quantData && quantData[h.symbol]">
                                     <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5"><span>行業緊缺動能</span><span>{{quantData[h.symbol].shortage_momentum}}%</span></div>
                                     <div class="progress-bar-bg mb-2"><div class="h-full progress-fill-purple" :style="{width: quantData[h.symbol].shortage_momentum + '%'}"></div></div>
                                     <div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5"><span>錯定價修復空間</span><span>{{quantData[h.symbol].mispricing_gap}}%</span></div>
@@ -174,7 +172,7 @@
                                 <span v-else class="text-[10px] text-slate-400 italic">待掃描...</span>
                             </td>
                             <td class="p-4">
-                                <div v-if="quantData[h.symbol]">
+                                <div v-if="quantData && quantData[h.symbol]">
                                     <div class="text-[10px] font-bold text-slate-500 mb-1">ATR 波動: <span class="font-mono">{{quantData[h.symbol].atr_percent}}%</span></div>
                                     <div class="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-1.5 rounded-lg leading-snug">{{quantData[h.symbol].action_zone}}</div>
                                 </div>
@@ -184,7 +182,7 @@
                                 <button @click="openAIModal(h.symbol)" class="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-[10px] font-black px-3 py-1.5 rounded-xl hover:bg-slate-200 transition">分析</button>
                             </td>
                         </tr>
-                        <tr v-if="filteredHoldings.length === 0">
+                        <tr v-if="(!filteredHoldings || filteredHoldings.length === 0)">
                             <td colspan="7" class="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">此板塊目前無持倉</td>
                         </tr>
                     </tbody>
@@ -226,7 +224,6 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
-// 🔴 必填：請填入您的 Apps Script 新網址 (v4.4 終極版)
 const API_URL = 'https://script.google.com/macros/s/AKfycbxHbXuMMgVzTolDffl8EZQvmji-YQA_OIAPAcuXrU8T6_hJnpMVrgIXCQFhxdw_5st4/exec'; 
 
 createApp({
@@ -242,10 +239,8 @@ createApp({
         const isGeneratingAnalysis = ref(false);
         const showCopilot = ref(false); const chatInput = ref(''); const chatHistory = ref([]); const isChatting = ref(false);
 
-        // 🟢 v4.5 新增：當前選中的分頁
         const currentTab = ref('全局');
 
-        // 🟢 v4.5 新增：第二層 AI 自動補全字典 (Fallback Dictionary)
         const FALLBACK_SECTOR_MAP = {
             'VKTX': 'BIO生技', 'NTLA': 'BIO生技', 'BEAM': 'BIO生技', 'NUVL': 'BIO生技', 'ETON': 'BIO生技', 'ASND': 'BIO生技',
             'UEC': 'NUC核能', 'LEU': 'NUC核能',
@@ -253,7 +248,6 @@ createApp({
             'ACHR': 'EVTOL航空', 'JOBY': 'EVTOL航空'
         };
 
-        // 🟢 v4.5 板塊圖示對照表
         const SECTOR_ICONS = {
             'BIO生技': '🧬', 'NUC核能': '☢️', 'TECH硬體': '💻', 'EVTOL航空': '🚁', '未分類': '📁'
         };
@@ -264,7 +258,6 @@ createApp({
                 try {
                     const p = JSON.parse(cached);
                     transactions.value = p.transactions||[]; marketData.value = p.marketData||{}; cashAdjustments.value = p.cashAdjustments||[]; recommendations.value = p.recommendations||[]; navHistoryData.value = p.navHistory||[];
-                    // 🟢 載入本機快取中的量化數據，讓畫面重新整理也不會空白
                     if (p.quantData) Object.assign(quantData, p.quantData); 
                 } catch(e) {}
             }
@@ -285,7 +278,6 @@ createApp({
                 
                 transactions.value = data.transactions || []; marketData.value = data.marketData || {}; cashAdjustments.value = data.cashAdjustments || []; navHistoryData.value = data.navHistory || []; recommendations.value = (data.recommendations || []).map(r=>({...r, showDetails:false}));
                 
-                // 將後端傳來的 AI 分數寫入畫面的變數中
                 if (data.quantData) {
                     Object.keys(quantData).forEach(k => delete quantData[k]);
                     Object.assign(quantData, data.quantData);
@@ -308,44 +300,36 @@ createApp({
             } catch(e) { alert(`儲存失敗: ${e.message}`); }
         };
 
-        // 🟢 v4.5 解析帶有前綴的交易紀錄，萃取乾淨的 Symbol 與 Sector
         const parsedTransactions = computed(() => {
-            return transactions.value.map(t => {
-                let cleanSymbol = t.symbol.toUpperCase();
+            return (transactions.value || []).map(t => {
+                let cleanSymbol = (t.symbol || '').toUpperCase();
                 let sector = '未分類';
-                
-                // 第一層判斷：使用者自定義前綴 (例如 BIO:VKTX)
                 if (cleanSymbol.includes(':')) {
                     const parts = cleanSymbol.split(':');
-                    sector = parts[0].trim();
-                    cleanSymbol = parts[1].trim();
-                } else {
-                    // 第二層判斷：字典 Fallback
-                    if (FALLBACK_SECTOR_MAP[cleanSymbol]) {
-                        sector = FALLBACK_SECTOR_MAP[cleanSymbol];
-                    }
+                    sector = parts[0].trim(); cleanSymbol = parts[1].trim();
+                } else if (FALLBACK_SECTOR_MAP[cleanSymbol]) {
+                    sector = FALLBACK_SECTOR_MAP[cleanSymbol];
                 }
                 return { ...t, cleanSymbol, sector };
             });
         });
 
-        // 🟢 v4.5 核心運算：包含 Sector 的 Dashboard
         const dashboard = computed(() => {
             let cash = 0, holdings = {}, investedAmount = 0, totalRealized = 0, totalUnrealized = 0, totalDividend = 0;
-            cashAdjustments.value.forEach(a => cash += Number(a.amount));
+            (cashAdjustments.value || []).forEach(a => cash += Number(a.amount));
             
             [...parsedTransactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(t => {
                 const sym = t.cleanSymbol;
                 if(!holdings[sym]) holdings[sym] = {symbol: sym, sector: t.sector, shares:0, totalCost:0, avgCost:0, currentPrice:0, dayChange:0, yieldPct:0, unrealizedPnL:0};
                 const amt = Number(t.price) * Number(t.shares);
-                if (t.type.toLowerCase() === 'buy') { cash -= amt; holdings[sym].totalCost += amt; holdings[sym].shares += Number(t.shares); holdings[sym].sector = t.sector; /* 以最後一次買入的標籤為準 */ } 
+                if ((t.type || '').toLowerCase() === 'buy') { cash -= amt; holdings[sym].totalCost += amt; holdings[sym].shares += Number(t.shares); holdings[sym].sector = t.sector; } 
                 else { cash += amt; const c = holdings[sym].avgCost * Number(t.shares); totalRealized += (amt - c); holdings[sym].totalCost -= c; holdings[sym].shares -= Number(t.shares); }
                 if(holdings[sym].shares > 0) holdings[sym].avgCost = holdings[sym].totalCost / holdings[sym].shares;
             });
 
             for(let s in holdings) {
                 if(holdings[s].shares > 0) {
-                    investedAmount += holdings[s].totalCost; holdings[s].currentPrice = marketData.value[s]?.price || 0; holdings[s].dayChange = marketData.value[s]?.change || 0; holdings[s].yieldPct = marketData.value[s]?.yield || 0; 
+                    investedAmount += holdings[s].totalCost; holdings[s].currentPrice = (marketData.value || {})[s]?.price || 0; holdings[s].dayChange = (marketData.value || {})[s]?.change || 0; holdings[s].yieldPct = (marketData.value || {})[s]?.yield || 0; 
                     holdings[s].unrealizedPnL = (holdings[s].currentPrice * holdings[s].shares) - holdings[s].totalCost;
                     holdings[s].unrealizedPnLPercent = holdings[s].totalCost > 0 ? ((holdings[s].unrealizedPnL / holdings[s].totalCost) * 100).toFixed(2) : 0;
                     totalUnrealized += holdings[s].unrealizedPnL; totalDividend += (holdings[s].shares * holdings[s].currentPrice * (holdings[s].yieldPct / 100)); 
@@ -354,47 +338,39 @@ createApp({
             return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalDividend, totalNav: cash + investedAmount + totalUnrealized };
         });
 
-        // 🟢 v4.5 動態提取板塊清單 (供左側導航欄使用)
         const sectorList = computed(() => {
+            if (!dashboard.value || !dashboard.value.holdings) return [];
             const sectors = {};
-            Object.values(dashboard.value.holdings).forEach(h => {
-                if (h.shares > 0) {
-                    sectors[h.sector] = (sectors[h.sector] || 0) + 1;
-                }
-            });
-            // 將 Object 轉為 Array 並排序，把 "未分類" 放到最後
-            return Object.keys(sectors).map(name => ({
-                name, count: sectors[name], icon: SECTOR_ICONS[name] || '💡'
-            })).sort((a, b) => {
+            Object.values(dashboard.value.holdings).forEach(h => { if (h.shares > 0) sectors[h.sector] = (sectors[h.sector] || 0) + 1; });
+            return Object.keys(sectors).map(name => ({ name, count: sectors[name], icon: SECTOR_ICONS[name] || '💡' })).sort((a, b) => {
                 if(a.name === '未分類') return 1; if(b.name === '未分類') return -1;
                 return b.count - a.count;
             });
         });
 
-        // 🟢 v4.5 根據當前 Tab 過濾的持倉 (供雷達表顯示)
         const filteredHoldings = computed(() => {
+            if (!dashboard.value || !dashboard.value.holdings) return [];
             const allHoldings = Object.values(dashboard.value.holdings).filter(h => h.shares > 0);
             if (currentTab.value === '全局') return allHoldings;
             return allHoldings.filter(h => h.sector === currentTab.value);
         });
 
-        // 🟢 v4.5 板塊專屬統計數據 (修復：加入預設回傳值以防 null 報錯)
         const currentSectorStats = computed(() => {
-            if (currentTab.value === '全局') return { totalValue: 0, weightPercent: 0, avgNarrative: 0, avgShortage: 0 };
+            if (currentTab.value === '全局' || !filteredHoldings.value) return { totalValue: 0, weightPercent: 0, avgNarrative: 0, avgShortage: 0 };
             
             let totalValue = 0; let totalNarrative = 0; let totalShortage = 0; let countWithData = 0;
             
             filteredHoldings.value.forEach(h => {
                 const val = h.shares * h.currentPrice;
                 totalValue += val;
-                if (quantData[h.symbol]) {
+                if (quantData && quantData[h.symbol]) {
                     totalNarrative += Number(quantData[h.symbol].narrative_score || 0);
                     totalShortage += Number(quantData[h.symbol].shortage_momentum || 0);
                     countWithData++;
                 }
             });
 
-            const weightPercent = dashboard.value.totalNav > 0 ? ((totalValue / dashboard.value.totalNav) * 100).toFixed(1) : 0;
+            const weightPercent = (dashboard.value && dashboard.value.totalNav > 0) ? ((totalValue / dashboard.value.totalNav) * 100).toFixed(1) : 0;
             const avgNarrative = countWithData > 0 ? Math.round(totalNarrative / countWithData) : 0;
             const avgShortage = countWithData > 0 ? Math.round(totalShortage / countWithData) : 0;
 
@@ -463,25 +439,24 @@ createApp({
         
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
-            if (currentTab.value !== '全局') return; // 只有在全局視圖才渲染圖表
-            // 延遲渲染以確保 DOM 已切換
+            if (currentTab.value !== '全局') return;
             setTimeout(() => {
                 const isDark = document.documentElement.classList.contains('dark'); const txtColor = isDark ? '#cbd5e1' : '#64748b';
                 const ctxPie = document.getElementById('allocationChart'); 
-                if(ctxPie) {
+                if(ctxPie && dashboard.value && dashboard.value.holdings) {
                     if(pieChart) pieChart.destroy();
                     const validHoldings = Object.entries(dashboard.value.holdings).filter(([k, v]) => v.shares > 0);
                     if(validHoldings.length > 0) { pieChart = new Chart(ctxPie, { type: 'doughnut', data: { labels: validHoldings.map(h => h[0]), datasets: [{ data: validHoldings.map(h => h[1].totalCost), backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#f43f5e', '#14b8a6'], borderWidth: isDark? 0 : 2 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, cutout: '75%' } }); }
                 }
                 const ctxLine = document.getElementById('navChart');
-                if(ctxLine && navHistoryData.value.length > 0) {
+                if(ctxLine && navHistoryData.value && navHistoryData.value.length > 0) {
                     if(lineChart) lineChart.destroy();
                     const history = [...navHistoryData.value].sort((a,b) => new Date(a.date) - new Date(b.date));
                     lineChart = new Chart(ctxLine, { type: 'line', data: { labels: history.map(h => h.date.substring(5)), datasets: [{ label: 'NAV', data: history.map(h => h.nav), borderColor: '#8b5cf6', backgroundColor: 'rgba(139, 92, 246, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { color: txtColor } }, y: { ticks: { color: txtColor } } } } });
                 }
             }, 50);
         };
-        watch(() => [dashboard.value.holdings, navHistoryData.value, currentTab.value], renderChart, { deep: true });
+        watch(() => [dashboard.value?.holdings, navHistoryData.value, currentTab.value], renderChart, { deep: true });
 
         const addTransaction = () => { if(!form.symbol) return; transactions.value.push({id:Date.now(), ...form, symbol: form.symbol.toUpperCase()}); form.symbol=''; form.price=''; form.shares=''; };
         const removeTransaction = (id) => { if(confirm('刪除交易？')) transactions.value = transactions.value.filter(t=>t.id!==id); };
@@ -489,22 +464,21 @@ createApp({
         const addRecommendation = () => { if(!recForm.symbol) return; const newRec = { id:Date.now(), date:new Date().toISOString().split('T')[0], symbol:recForm.symbol.toUpperCase(), type:recForm.type, price:recForm.price, count:recForm.count, analysis:recForm.analysis }; recommendations.value.push({...newRec, showDetails:false}); recForm.symbol=''; recForm.analysis=''; recForm.count=1; };
         const removeRecommendation = (id) => { if(confirm('刪除公告？')) recommendations.value = recommendations.value.filter(r=>r.id!==id); };
         const formatCurrency = (v, d=0) => (v||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
-        
         const getRecTypeLabel = (type) => { const map = { 'Buy': '買入', 'Sell': '賣出', 'New': '建倉', 'Add': '加碼', 'Reduce': '減碼', 'Clear': '清倉' }; return map[type] || type; };
         const getRecTypeClass = (type) => { const map = { 'Buy': 'text-green-500', 'Sell': 'text-red-500', 'New': 'text-blue-500 dark:text-blue-400', 'Add': 'text-green-500', 'Reduce': 'text-red-500', 'Clear': 'text-amber-500' }; return map[type] || 'text-slate-500'; };
 
         const sortedTransactions = computed(() => {
             const h = {};
-            return [...transactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(t => {
-                const sym = t.symbol.toUpperCase(); if(!h[sym]) h[sym] = {s:0, c:0, avg:0};
+            return [...(transactions.value || [])].sort((a,b)=>new Date(a.date)-new Date(b.date)).map(t => {
+                const sym = (t.symbol || '').toUpperCase(); if(!h[sym]) h[sym] = {s:0, c:0, avg:0};
                 let pnl = 0; 
-                if(t.type.toLowerCase()==='buy'){ h[sym].c += Number(t.price)*Number(t.shares); h[sym].s += Number(t.shares); h[sym].avg = h[sym].c/h[sym].s; } 
+                if((t.type || '').toLowerCase()==='buy'){ h[sym].c += Number(t.price)*Number(t.shares); h[sym].s += Number(t.shares); h[sym].avg = h[sym].c/h[sym].s; } 
                 else { pnl = (Number(t.price) - h[sym].avg)*Number(t.shares); h[sym].c -= h[sym].avg*Number(t.shares); h[sym].s -= Number(t.shares); }
                 return {...t, realizedPnL: pnl};
             }).reverse();
         });
-        const filteredTransactions = computed(() => { if(!searchQuery.value) return sortedTransactions.value; return sortedTransactions.value.filter(t => t.symbol.includes(searchQuery.value.toUpperCase())); });
-        const monthlyStats = computed(() => { const s = {}; sortedTransactions.value.forEach(t => { if(t.type.toLowerCase()==='sell' && t.realizedPnL) { const m = t.date.substring(0,7); s[m] = (s[m]||0) + t.realizedPnL; } }); return Object.keys(s).sort().reverse().map(m => ({ month: m, pnl: s[m] })); });
+        const filteredTransactions = computed(() => { if(!searchQuery.value) return sortedTransactions.value; return sortedTransactions.value.filter(t => (t.symbol || '').includes(searchQuery.value.toUpperCase())); });
+        const monthlyStats = computed(() => { const s = {}; sortedTransactions.value.forEach(t => { if((t.type || '').toLowerCase()==='sell' && t.realizedPnL) { const m = t.date.substring(0,7); s[m] = (s[m]||0) + t.realizedPnL; } }); return Object.keys(s).sort().reverse().map(m => ({ month: m, pnl: s[m] })); });
 
         return { 
             dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats, quantData,
@@ -513,7 +487,7 @@ createApp({
             scanAllQuantRisk, isScanningAll, isGeneratingAnalysis,
             showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked, getRecTypeLabel, getRecTypeClass,
             showCopilot, chatInput, chatHistory, sendChat, isChatting,
-            currentTab, sectorList, filteredHoldings, currentSectorStats // 🟢 暴露 v4.5 新變數給畫面
+            currentTab, sectorList, filteredHoldings, currentSectorStats 
         };
     }
 }).mount('#app');
