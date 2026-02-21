@@ -77,7 +77,7 @@
             </div>
         </header>
 
-        <div v-show="currentTab === '全局'">
+        <div v-if="currentTab === '全局'">
             <div class="grid grid-cols-2 lg:grid-cols-7 gap-3 mb-6">
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">可用現金</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard?.cash) }} <span @click="showCashModal=true" class="text-[10px] text-blue-500 cursor-pointer underline ml-1">調節</span></p></div>
                 <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700"><p class="text-[10px] text-slate-400 font-black uppercase">持倉總成本</p><p class="text-lg lg:text-xl font-black mt-1">${{ formatCurrency(dashboard?.investedAmount) }}</p></div>
@@ -105,7 +105,7 @@
             </div>
         </div>
 
-        <div v-show="currentTab !== '全局'">
+        <div v-if="currentTab !== '全局'">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" v-if="currentSectorStats">
                 <div class="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/20 p-5 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-widest mb-1">板塊資金權重</p>
@@ -189,8 +189,8 @@
                 </table>
             </div>
         </div>
-
-    </div>
+        
+        </div>
 
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         <div v-if="showCopilot" class="bg-white dark:bg-slate-800 w-[350px] h-[450px] mb-4 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transition-all">
@@ -230,7 +230,13 @@ createApp({
     setup() {
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); const recommendations = ref([]);
         const navHistoryData = ref([]); const quantData = reactive({});
-        const isSyncing = ref(false); const isScanningAll = ref(false); const password = ref(localStorage.getItem('p_pass') || '');
+        const isSyncing = ref(false); const isScanningAll = ref(false); 
+        
+        // 修復：安全地讀取 localStorage
+        const safeGetLocal = (key, defaultVal = '') => { try { return localStorage.getItem(key) || defaultVal; } catch(e) { return defaultVal; } };
+        const safeSetLocal = (key, val) => { try { localStorage.setItem(key, val); } catch(e) { console.warn("localStorage set failed:", e); } };
+        
+        const password = ref(safeGetLocal('p_pass'));
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         const recForm = reactive({ symbol: '', type: 'New', price: '', count: 1, analysis: '' });
         const searchQuery = ref(''); const showCashModal = ref(false); const showAIModal = ref(false); 
@@ -253,7 +259,7 @@ createApp({
         };
 
         onMounted(() => { 
-            const cached = localStorage.getItem('app_cache');
+            const cached = safeGetLocal('app_cache');
             if (cached) {
                 try {
                     const p = JSON.parse(cached);
@@ -262,11 +268,11 @@ createApp({
                 } catch(e) {}
             }
             if (password.value) fetchData(false); 
-            if(localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
+            if(safeGetLocal('theme') === 'dark') document.documentElement.classList.add('dark');
         });
 
-        const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderChart(); };
-        const checkPassword = () => { if (!password.value) { const p = prompt('請輸入管理密碼:'); if (p) { password.value = p; localStorage.setItem('p_pass', p); return true; } return false; } return true; };
+        const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); safeSetLocal('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderChart(); };
+        const checkPassword = () => { if (!password.value) { const p = prompt('請輸入管理密碼:'); if (p) { password.value = p; safeSetLocal('p_pass', p); return true; } return false; } return true; };
 
         const fetchData = async (forceAlert = false) => {
             if (!checkPassword()) return;
@@ -283,7 +289,7 @@ createApp({
                     Object.assign(quantData, data.quantData);
                 }
 
-                localStorage.setItem('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData}));
+                safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData}));
             } catch (e) { if(forceAlert) alert(`同步失敗: ${e.message}`); } finally { isSyncing.value = false; }
         };
 
@@ -379,7 +385,9 @@ createApp({
 
         const scanAllQuantRisk = async () => {
             const now = Date.now();
-            let history = JSON.parse(localStorage.getItem('quant_scan_history') || '[]');
+            let history = [];
+            try { history = JSON.parse(safeGetLocal('quant_scan_history', '[]')); } catch(e){}
+            
             history = history.filter(time => now - time < 86400000);
             if (history.length >= 3) { alert("⛔ 頻率限制：\n您在過去 24 小時內已達 3 次掃描上限。"); return; }
             if (history.length > 0) {
@@ -406,8 +414,8 @@ createApp({
             
             isScanningAll.value = false;
             if (!hasError) { 
-                history.push(Date.now()); localStorage.setItem('quant_scan_history', JSON.stringify(history));
-                localStorage.setItem('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData}));
+                history.push(Date.now()); safeSetLocal('quant_scan_history', JSON.stringify(history));
+                safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData}));
                 alert("✅ 掃描完成！記得點擊「儲存淨值」備份。"); 
             } else { alert("⚠️ 部分掃描錯誤。"); }
         };
@@ -435,8 +443,25 @@ createApp({
             try { const r = await fetch(`${API_URL}?action=stress_test&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 測試失敗: ${e.message}`; } finally { aiLoading.value = false; } 
         };
 
-        const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${s}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
+        // 修復：為 symbol 加上 encodeURIComponent
+        const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(s)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
         
+        // 修復：補回被遺漏的 generateAnalysis 函數定義
+        const generateAnalysis = async () => { 
+            if (!recForm.symbol) return alert('請先輸入代號！'); 
+            if (!checkPassword()) return; 
+            isGeneratingAnalysis.value = true; 
+            try { 
+                const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(recForm.symbol)}&password=${encodeURIComponent(password.value)}`); 
+                const d = await r.json(); 
+                recForm.analysis = d.analysis; 
+            } catch(e) { 
+                alert(`AI 生成失敗`); 
+            } finally { 
+                isGeneratingAnalysis.value = false; 
+            } 
+        };
+
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
             if (currentTab.value !== '全局') return;
