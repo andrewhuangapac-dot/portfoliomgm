@@ -106,6 +106,15 @@
         </div>
 
         <div v-if="currentTab !== '全局'">
+            
+            <div class="bg-slate-100 dark:bg-slate-800/60 p-4 rounded-2xl mb-4 border border-slate-200 dark:border-slate-700 flex flex-col gap-1 shadow-inner">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">👑 基準對標與龍頭 (Benchmarks)</span>
+                </div>
+                <div class="text-sm font-black text-slate-800 dark:text-slate-100 mt-1">{{ getSectorInfo(currentTab).benchmarks }}</div>
+                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{{ getSectorInfo(currentTab).desc }}</div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" v-if="currentSectorStats">
                 <div class="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/20 p-5 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col justify-center">
                     <p class="text-[10px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-widest mb-1">板塊資金權重</p>
@@ -189,8 +198,116 @@
                 </table>
             </div>
         </div>
-        
+
+        <div v-if="currentTab !== '全局'" class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm p-5 mb-6">
+            <h3 class="font-black text-xs uppercase text-slate-500 mb-4 flex items-center gap-2">
+                📰 板塊最新催化劑 (Live News Feed) 
+                <span v-if="isFetchingNews" class="animate-pulse text-[10px] text-blue-500">Retrieving signals...</span>
+            </h3>
+            <div class="space-y-3">
+                <a v-for="(news, i) in sectorNews" :key="i" :href="news.link" target="_blank" class="block p-4 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-900 rounded-xl transition border border-slate-100 dark:border-slate-800">
+                    <div class="flex items-start gap-3">
+                        <span class="bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-2 py-0.5 rounded text-[10px] font-black shrink-0">{{ news.symbol }}</span>
+                        <div>
+                            <p class="text-sm font-bold leading-snug text-slate-800 dark:text-slate-200">{{ news.title }}</p>
+                            <p class="text-[10px] text-slate-400 mt-1 font-mono">{{ new Date(news.pubDate).toLocaleString() }}</p>
+                        </div>
+                    </div>
+                </a>
+                <div v-if="!isFetchingNews && sectorNews.length === 0" class="text-center text-slate-400 text-[10px] py-4 uppercase tracking-widest">暫無最新新聞</div>
+            </div>
         </div>
+
+        <div v-if="currentTab === '全局'" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            
+            <div class="lg:col-span-3">
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                    <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex justify-between items-center">
+                        <span class="font-black text-xs uppercase text-slate-500">📜 歷史交易紀錄</span>
+                        <input v-model="searchQuery" type="text" placeholder="🔍 搜尋代號..." class="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 outline-none w-28 text-center font-bold">
+                    </div>
+                    <div class="overflow-y-auto no-scrollbar max-h-[600px]">
+                        <table class="w-full text-sm min-w-[500px]">
+                            <thead class="bg-slate-50 dark:bg-slate-900 text-[10px] text-slate-400 uppercase font-bold sticky top-0 z-10">
+                                <tr><th class="p-4 text-left">日期</th><th class="p-4 text-left">標的</th><th class="p-4 text-center">操作</th><th class="p-4 text-right">單價</th><th class="p-4 text-right">股數</th><th class="p-4 text-right">實現損益</th><th class="p-4"></th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
+                                <tr v-for="t in filteredTransactions" :key="t.id" class="hover:bg-slate-50 dark:hover:bg-slate-700 transition h-[51px]">
+                                    <td class="p-4 text-[10px] text-slate-400 font-mono">{{ t.date }}</td><td class="p-4 font-black uppercase">{{ t.symbol }}</td>
+                                    <td class="p-4 text-center"><span :class="t.type==='buy'?'text-blue-500 bg-blue-50 dark:bg-blue-900/50':'text-amber-500 bg-amber-50 dark:bg-amber-900/50'" class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase">{{ t.type }}</span></td>
+                                    <td class="p-4 text-right font-mono">${{ formatCurrency(t.price, 2) }}</td><td class="p-4 text-right font-mono">{{ t.shares }}</td>
+                                    <td class="p-4 text-right font-black font-mono" :class="t.realizedPnL >= 0 ? 'text-up' : 'text-down'"><span v-if="t.type.toLowerCase()==='sell'">${{ formatCurrency(t.realizedPnL, 0) }}</span><span v-else class="text-slate-300 dark:text-slate-600">-</span></td>
+                                    <td class="p-4 text-center"><button @click="removeTransaction(t.id)" class="text-slate-300 dark:text-slate-600 hover:text-red-500 font-black">×</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-6">
+                
+                <div class="bg-white dark:bg-slate-800 shadow-2xl rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden">
+                    <div class="p-5 bg-slate-900 dark:bg-black text-white font-black text-xs uppercase flex justify-between">
+                        <span>📢 戰略公告發布</span>
+                    </div>
+                    <div class="p-5 space-y-3 bg-slate-50 dark:bg-slate-800">
+                        <div class="flex gap-2">
+                            <input v-model="recForm.symbol" placeholder="代號" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm uppercase font-black outline-none">
+                            <select v-model="recForm.type" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-black outline-none">
+                                <option value="New">建倉</option><option value="Add">加碼</option><option value="Reduce">減碼</option><option value="Clear">清倉</option>
+                            </select>
+                        </div>
+                        <div class="flex gap-2">
+                            <input v-model.number="recForm.price" type="number" step="0.01" placeholder="目標價格" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
+                            <input v-model.number="recForm.count" type="number" placeholder="AI信心" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
+                        </div>
+                        <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="w-full py-2.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl text-[11px] font-black border border-purple-200 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-800 transition">
+                            {{ isGeneratingAnalysis ? '⏳ Qwen 深度運算中...' : '✨ 自動生成 AI 觀點' }}
+                        </button>
+                        <textarea v-model="recForm.analysis" rows="3" placeholder="敘事邏輯或催化劑說明..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-[11px] outline-none"></textarea>
+                        <button @click="addRecommendation" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-black text-xs shadow-lg transition">發布至對外看板</button>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                    <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 font-black text-xs uppercase text-slate-500">已發布公告紀錄</div>
+                    <div class="divide-y divide-slate-50 dark:divide-slate-700 max-h-[300px] overflow-y-auto no-scrollbar">
+                        <div v-for="r in sortedRecommendations" :key="r.id" class="p-4 relative">
+                            <button @click="removeRecommendation(r.id)" class="absolute top-4 right-4 text-slate-300 hover:text-red-500">×</button>
+                            <p class="font-black text-sm">{{ r.symbol }} <span class="text-[9px] text-slate-400 font-mono ml-1">{{ r.date }}</span></p>
+                            <div class="flex justify-between items-center mt-1">
+                                <span class="text-[10px] font-bold" :class="getRecTypeClass(r.type)">{{ getRecTypeLabel(r.type) }} @ ${{ r.price }}</span>
+                                <span class="text-[9px] bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-400 px-1.5 rounded-full font-bold">AI: {{ r.count }}</span>
+                            </div>
+                            <div v-if="r.analysis" class="mt-2">
+                                <button @click="r.showDetails = !r.showDetails" class="text-[9px] text-blue-500 font-black hover:underline">{{ r.showDetails ? '隱藏分析 ▲' : '查看觀點 ▼' }}</button>
+                                <div v-if="r.showDetails" class="mt-2 text-[11px] bg-slate-50 dark:bg-slate-900 p-3 rounded-xl leading-relaxed markdown-content border border-slate-100 dark:border-slate-700" v-html="r.analysis ? marked.parse(r.analysis) : ''"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                    <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月獲利</div>
+                    <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
+                        <div v-for="s in monthlyStats" :key="s.month" class="p-4 flex justify-between text-sm">
+                            <span class="font-bold text-slate-500 uppercase">{{ s.month }}</span><span :class="s.pnl >= 0 ? 'text-up' : 'text-down'" class="font-black font-mono">{{ s.pnl >= 0 ? '+' : '' }}${{ formatCurrency(s.pnl, 0) }}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                    <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">💵 現金流</div>
+                    <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
+                        <div v-for="c in sortedCash" :key="c.id" class="p-4 flex justify-between text-sm"><div class="max-w-[60%]"><p class="font-black truncate text-xs">{{ c.note }}</p><p class="text-[10px] text-slate-400 font-mono">{{ c.date }}</p></div><span :class="c.amount >= 0 ? 'text-blue-500' : 'text-red-500'" class="font-black font-mono text-xs">{{ c.amount >= 0 ? '+' : '' }}${{ formatCurrency(c.amount, 0) }}</span></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
 
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         <div v-if="showCopilot" class="bg-white dark:bg-slate-800 w-[350px] h-[450px] mb-4 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transition-all">
@@ -224,6 +341,7 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
+// 🔴 必填：請填入您的 Apps Script 新網址 (v4.4 終極版)
 const API_URL = 'https://script.google.com/macros/s/AKfycbxHbXuMMgVzTolDffl8EZQvmji-YQA_OIAPAcuXrU8T6_hJnpMVrgIXCQFhxdw_5st4/exec'; 
 
 createApp({
@@ -232,9 +350,8 @@ createApp({
         const navHistoryData = ref([]); const quantData = reactive({});
         const isSyncing = ref(false); const isScanningAll = ref(false); 
         
-        // 修復：安全地讀取 localStorage
         const safeGetLocal = (key, defaultVal = '') => { try { return localStorage.getItem(key) || defaultVal; } catch(e) { return defaultVal; } };
-        const safeSetLocal = (key, val) => { try { localStorage.setItem(key, val); } catch(e) { console.warn("localStorage set failed:", e); } };
+        const safeSetLocal = (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} };
         
         const password = ref(safeGetLocal('p_pass'));
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
@@ -246,16 +363,27 @@ createApp({
         const showCopilot = ref(false); const chatInput = ref(''); const chatHistory = ref([]); const isChatting = ref(false);
 
         const currentTab = ref('全局');
+        const sectorNews = ref([]);
+        const isFetchingNews = ref(false);
 
+        // 🟢 第二層分類字典與圖示
         const FALLBACK_SECTOR_MAP = {
             'VKTX': 'BIO生技', 'NTLA': 'BIO生技', 'BEAM': 'BIO生技', 'NUVL': 'BIO生技', 'ETON': 'BIO生技', 'ASND': 'BIO生技',
-            'UEC': 'NUC核能', 'LEU': 'NUC核能',
-            'MU': 'TECH硬體', 'WDC': 'TECH硬體',
-            'ACHR': 'EVTOL航空', 'JOBY': 'EVTOL航空'
+            'UEC': 'NUC核能', 'LEU': 'NUC核能', 'MU': 'TECH硬體', 'WDC': 'TECH硬體', 'ACHR': 'EVTOL航空', 'JOBY': 'EVTOL航空'
+        };
+        const SECTOR_ICONS = { 'BIO生技': '🧬', 'NUC核能': '☢️', 'TECH硬體': '💻', 'EVTOL航空': '🚁', '未分類': '📁' };
+
+        // 🟢 板塊對標資訊庫 (Benchmarks Dictionary)
+        const SECTOR_BENCHMARKS = {
+            'BIO生技': { benchmarks: 'XBI (生技ETF) · LLY (禮來) · NVO (諾和諾德)', desc: '關注 FDA 批准、P1/P2/P3 臨床數據發布與併購 (M&A) 事件。' },
+            'NUC核能': { benchmarks: 'URA (鈾礦ETF) · URNM · CCJ (卡梅科)', desc: '關注鈾價現貨走勢、科技巨頭 SMR 投資與政府核能補貼計畫。' },
+            'TECH硬體': { benchmarks: 'SOXX (半導體ETF) · NVDA (輝達) · TSM (台積電)', desc: '關注晶片出貨量、大廠 AI 資本支出 (Capex) 與先進封裝產能緊缺度。' },
+            'EVTOL航空': { benchmarks: 'XAR (航空ETF) · ERJ (巴西航空)', desc: '關注 FAA 認證進度、試飛數據與商業化航線訂單。' },
+            '未分類': { benchmarks: 'SPY (標普500) · QQQ (納斯達克100)', desc: '尚未分類之標的，請在交易時透過「標籤:代號」進行歸類。' }
         };
 
-        const SECTOR_ICONS = {
-            'BIO生技': '🧬', 'NUC核能': '☢️', 'TECH硬體': '💻', 'EVTOL航空': '🚁', '未分類': '📁'
+        const getSectorInfo = (sectorName) => {
+            return SECTOR_BENCHMARKS[sectorName] || { benchmarks: '無專屬基準', desc: '追蹤該板塊之個股特定催化劑與錯定價修復空間。' };
         };
 
         onMounted(() => { 
@@ -383,6 +511,38 @@ createApp({
             return { totalValue, weightPercent, avgNarrative, avgShortage };
         });
 
+        // 🟢 抓取板塊專屬最新新聞邏輯 (免後端 API，前端直連 Google News RSS)
+        watch(currentTab, async (newTab) => {
+            if (newTab === '全局') { sectorNews.value = []; return; }
+            
+            sectorNews.value = [];
+            isFetchingNews.value = true;
+            // 抓取該板塊持倉最大的前 3 檔股票代號
+            const topSymbols = [...filteredHoldings.value].sort((a,b) => (b.shares*b.currentPrice) - (a.shares*a.currentPrice)).slice(0, 3).map(h => h.symbol);
+            
+            try {
+                for (const sym of topSymbols) {
+                    const rssUrl = encodeURIComponent(`https://news.google.com/rss/search?q=${sym}+stock+news&hl=en-US&gl=US&ceid=US:en`);
+                    const apiEndpoint = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
+                    const res = await fetch(apiEndpoint);
+                    const data = await res.json();
+                    
+                    if (data.status === 'ok' && data.items) {
+                        const items = data.items.slice(0, 2); // 每檔股票取最新的 2 則新聞
+                        items.forEach(item => {
+                            sectorNews.value.push({ symbol: sym, title: item.title, link: item.link, pubDate: item.pubDate });
+                        });
+                    }
+                }
+                // 將所有新聞依照時間由新到舊排序
+                sectorNews.value.sort((a,b) => new Date(b.pubDate) - new Date(a.pubDate));
+            } catch(e) {
+                console.warn("Fetch news error", e);
+            } finally {
+                isFetchingNews.value = false;
+            }
+        });
+
         const scanAllQuantRisk = async () => {
             const now = Date.now();
             let history = [];
@@ -443,10 +603,8 @@ createApp({
             try { const r = await fetch(`${API_URL}?action=stress_test&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 測試失敗: ${e.message}`; } finally { aiLoading.value = false; } 
         };
 
-        // 修復：為 symbol 加上 encodeURIComponent
         const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(s)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
         
-        // 修復：補回被遺漏的 generateAnalysis 函數定義
         const generateAnalysis = async () => { 
             if (!recForm.symbol) return alert('請先輸入代號！'); 
             if (!checkPassword()) return; 
@@ -512,7 +670,7 @@ createApp({
             scanAllQuantRisk, isScanningAll, isGeneratingAnalysis,
             showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked, getRecTypeLabel, getRecTypeClass,
             showCopilot, chatInput, chatHistory, sendChat, isChatting,
-            currentTab, sectorList, filteredHoldings, currentSectorStats 
+            currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews 
         };
     }
 }).mount('#app');
