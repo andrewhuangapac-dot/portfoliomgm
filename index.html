@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>美股量化戰情室 v4.5 (Sector Matrix)</title>
+    <title>美股量化戰情室 v4.5 (Sector Matrix 終極版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -66,7 +66,7 @@
             <div>
                 <h2 class="text-2xl font-black tracking-tight">{{ currentTab === '全局' ? '全局戰略總覽' : currentTab + ' 板塊' }}</h2>
                 <p v-if="isSyncing" class="text-blue-500 text-xs mt-1 animate-pulse font-bold tracking-widest uppercase">🔄 Syncing Backend...</p>
-                <p v-else class="text-slate-500 dark:text-slate-400 text-xs mt-1 font-bold">Qwen3.5-Plus 引擎已上線</p>
+                <p v-else class="text-slate-500 dark:text-slate-400 text-xs mt-1 font-bold">AI引擎已上線</p>
             </div>
             <div class="flex flex-wrap gap-2">
                 <button @click="runStressTest" class="px-3 py-1.5 bg-gradient-to-r from-red-600 to-orange-600 text-white rounded-xl text-xs font-black shadow-lg flex items-center gap-1 hover:scale-105 transition"><span class="text-sm">💥</span> 壓力測試</button>
@@ -105,14 +105,18 @@
             </div>
         </div>
 
-        <div v-if="currentTab !== '全局'">
+        <div v-show="currentTab !== '全局'">
             
-            <div class="bg-slate-100 dark:bg-slate-800/60 p-4 rounded-2xl mb-4 border border-slate-200 dark:border-slate-700 flex flex-col gap-1 shadow-inner">
-                <div class="flex items-center gap-2">
-                    <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest">👑 基準對標與龍頭 (Benchmarks)</span>
+            <div class="bg-slate-100 dark:bg-slate-800/60 p-5 rounded-[2rem] mb-6 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <div class="flex flex-col md:flex-row md:items-center justify-between mb-4 gap-2">
+                    <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">👑 基準對標與龍頭 (近3個月動能走勢)</span>
+                    <span class="text-[10px] text-slate-500 bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{{ getSectorInfo(currentTab).desc }}</span>
                 </div>
-                <div class="text-sm font-black text-slate-800 dark:text-slate-100 mt-1">{{ getSectorInfo(currentTab).benchmarks }}</div>
-                <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{{ getSectorInfo(currentTab).desc }}</div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div id="tv-widget-0" class="h-[120px] rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm pointer-events-none"></div>
+                    <div id="tv-widget-1" class="h-[120px] rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm pointer-events-none"></div>
+                    <div id="tv-widget-2" class="h-[120px] rounded-xl overflow-hidden bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-sm pointer-events-none"></div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" v-if="currentSectorStats">
@@ -199,7 +203,7 @@
             </div>
         </div>
 
-        <div v-if="currentTab !== '全局'" class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm p-5 mb-6">
+        <div v-show="currentTab !== '全局'" class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm p-5 mb-6">
             <h3 class="font-black text-xs uppercase text-slate-500 mb-4 flex items-center gap-2">
                 📰 板塊最新催化劑 (Live News Feed) 
                 <span v-if="isFetchingNews" class="animate-pulse text-[10px] text-blue-500">Retrieving signals...</span>
@@ -218,8 +222,7 @@
             </div>
         </div>
 
-        <div v-if="currentTab === '全局'" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            
+        <div v-show="currentTab === '全局'" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div class="lg:col-span-3">
                 <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
                     <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex justify-between items-center">
@@ -246,25 +249,18 @@
             </div>
 
             <div class="space-y-6">
-                
                 <div class="bg-white dark:bg-slate-800 shadow-2xl rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden">
-                    <div class="p-5 bg-slate-900 dark:bg-black text-white font-black text-xs uppercase flex justify-between">
-                        <span>📢 戰略公告發布</span>
-                    </div>
+                    <div class="p-5 bg-slate-900 dark:bg-black text-white font-black text-xs uppercase flex justify-between"><span>📢 戰略公告發布</span></div>
                     <div class="p-5 space-y-3 bg-slate-50 dark:bg-slate-800">
                         <div class="flex gap-2">
                             <input v-model="recForm.symbol" placeholder="代號" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm uppercase font-black outline-none">
-                            <select v-model="recForm.type" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-black outline-none">
-                                <option value="New">建倉</option><option value="Add">加碼</option><option value="Reduce">減碼</option><option value="Clear">清倉</option>
-                            </select>
+                            <select v-model="recForm.type" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-black outline-none"><option value="New">建倉</option><option value="Add">加碼</option><option value="Reduce">減碼</option><option value="Clear">清倉</option></select>
                         </div>
                         <div class="flex gap-2">
                             <input v-model.number="recForm.price" type="number" step="0.01" placeholder="目標價格" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                             <input v-model.number="recForm.count" type="number" placeholder="AI信心" class="w-1/2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                         </div>
-                        <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="w-full py-2.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl text-[11px] font-black border border-purple-200 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-800 transition">
-                            {{ isGeneratingAnalysis ? '⏳ Qwen 深度運算中...' : '✨ 自動生成 AI 觀點' }}
-                        </button>
+                        <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="w-full py-2.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl text-[11px] font-black border border-purple-200 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-800 transition">{{ isGeneratingAnalysis ? '⏳ AI 深度運算中...' : '✨ 自動生成 AI 觀點' }}</button>
                         <textarea v-model="recForm.analysis" rows="3" placeholder="敘事邏輯或催化劑說明..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-[11px] outline-none"></textarea>
                         <button @click="addRecommendation" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-black text-xs shadow-lg transition">發布至對外看板</button>
                     </div>
@@ -276,14 +272,8 @@
                         <div v-for="r in sortedRecommendations" :key="r.id" class="p-4 relative">
                             <button @click="removeRecommendation(r.id)" class="absolute top-4 right-4 text-slate-300 hover:text-red-500">×</button>
                             <p class="font-black text-sm">{{ r.symbol }} <span class="text-[9px] text-slate-400 font-mono ml-1">{{ r.date }}</span></p>
-                            <div class="flex justify-between items-center mt-1">
-                                <span class="text-[10px] font-bold" :class="getRecTypeClass(r.type)">{{ getRecTypeLabel(r.type) }} @ ${{ r.price }}</span>
-                                <span class="text-[9px] bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-400 px-1.5 rounded-full font-bold">AI: {{ r.count }}</span>
-                            </div>
-                            <div v-if="r.analysis" class="mt-2">
-                                <button @click="r.showDetails = !r.showDetails" class="text-[9px] text-blue-500 font-black hover:underline">{{ r.showDetails ? '隱藏分析 ▲' : '查看觀點 ▼' }}</button>
-                                <div v-if="r.showDetails" class="mt-2 text-[11px] bg-slate-50 dark:bg-slate-900 p-3 rounded-xl leading-relaxed markdown-content border border-slate-100 dark:border-slate-700" v-html="r.analysis ? marked.parse(r.analysis) : ''"></div>
-                            </div>
+                            <div class="flex justify-between items-center mt-1"><span class="text-[10px] font-bold" :class="getRecTypeClass(r.type)">{{ getRecTypeLabel(r.type) }} @ ${{ r.price }}</span><span class="text-[9px] bg-orange-100 dark:bg-orange-900/50 text-orange-700 dark:text-orange-400 px-1.5 rounded-full font-bold">AI: {{ r.count }}</span></div>
+                            <div v-if="r.analysis" class="mt-2"><button @click="r.showDetails = !r.showDetails" class="text-[9px] text-blue-500 font-black hover:underline">{{ r.showDetails ? '隱藏分析 ▲' : '查看觀點 ▼' }}</button><div v-if="r.showDetails" class="mt-2 text-[11px] bg-slate-50 dark:bg-slate-900 p-3 rounded-xl leading-relaxed markdown-content border border-slate-100 dark:border-slate-700" v-html="r.analysis ? marked.parse(r.analysis) : ''"></div></div>
                         </div>
                     </div>
                 </div>
@@ -291,9 +281,7 @@
                 <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
                     <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月獲利</div>
                     <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
-                        <div v-for="s in monthlyStats" :key="s.month" class="p-4 flex justify-between text-sm">
-                            <span class="font-bold text-slate-500 uppercase">{{ s.month }}</span><span :class="s.pnl >= 0 ? 'text-up' : 'text-down'" class="font-black font-mono">{{ s.pnl >= 0 ? '+' : '' }}${{ formatCurrency(s.pnl, 0) }}</span>
-                        </div>
+                        <div v-for="s in monthlyStats" :key="s.month" class="p-4 flex justify-between text-sm"><span class="font-bold text-slate-500 uppercase">{{ s.month }}</span><span :class="s.pnl >= 0 ? 'text-up' : 'text-down'" class="font-black font-mono">{{ s.pnl >= 0 ? '+' : '' }}${{ formatCurrency(s.pnl, 0) }}</span></div>
                     </div>
                 </div>
                 
@@ -303,7 +291,6 @@
                         <div v-for="c in sortedCash" :key="c.id" class="p-4 flex justify-between text-sm"><div class="max-w-[60%]"><p class="font-black truncate text-xs">{{ c.note }}</p><p class="text-[10px] text-slate-400 font-mono">{{ c.date }}</p></div><span :class="c.amount >= 0 ? 'text-blue-500' : 'text-red-500'" class="font-black font-mono text-xs">{{ c.amount >= 0 ? '+' : '' }}${{ formatCurrency(c.amount, 0) }}</span></div>
                     </div>
                 </div>
-
             </div>
         </div>
 
@@ -311,25 +298,13 @@
 
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         <div v-if="showCopilot" class="bg-white dark:bg-slate-800 w-[350px] h-[450px] mb-4 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transition-all">
-            <div class="bg-gradient-to-r from-slate-900 to-indigo-900 p-4 flex justify-between items-center text-white">
-                <span class="font-black text-sm flex items-center gap-2">🤖 Qwen Copilot</span>
-                <button @click="showCopilot = false" class="hover:text-slate-300 text-xl leading-none">&times;</button>
-            </div>
+            <div class="bg-gradient-to-r from-slate-900 to-indigo-900 p-4 flex justify-between items-center text-white"><span class="font-black text-sm flex items-center gap-2">🤖 AI Copilot</span><button @click="showCopilot = false" class="hover:text-slate-300 text-xl leading-none">&times;</button></div>
             <div class="flex-1 p-4 overflow-y-auto bg-slate-50 dark:bg-slate-900 flex flex-col gap-3 text-sm no-scrollbar" id="chat-box">
-                <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-300 w-[85%] markdown-content">
-                    Boss，四大支柱分析引擎已就緒。請問需要什麼幫助？
-                </div>
-                <div v-for="(msg, i) in chatHistory" :key="i" class="flex flex-col w-[85%]" :class="msg.role==='user'?'self-end items-end':'self-start'">
-                    <div class="p-3 rounded-2xl shadow-sm border text-[13px]" :class="msg.role==='user'?'bg-blue-600 text-white rounded-tr-none border-blue-700':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-none border-slate-100 dark:border-slate-700 markdown-content'" v-html="msg.role==='ai'? marked.parse(msg.text) : msg.text"></div>
-                </div>
-                <div v-if="isChatting" class="self-start bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 w-[60%]">
-                    <span class="animate-pulse font-bold text-blue-500 text-[10px] tracking-widest uppercase">Thinking...</span>
-                </div>
+                <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-300 w-[85%] markdown-content">Boss，四大支柱分析引擎已就緒。請問需要什麼幫助？</div>
+                <div v-for="(msg, i) in chatHistory" :key="i" class="flex flex-col w-[85%]" :class="msg.role==='user'?'self-end items-end':'self-start'"><div class="p-3 rounded-2xl shadow-sm border text-[13px]" :class="msg.role==='user'?'bg-blue-600 text-white rounded-tr-none border-blue-700':'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-none border-slate-100 dark:border-slate-700 markdown-content'" v-html="msg.role==='ai'? marked.parse(msg.text) : msg.text"></div></div>
+                <div v-if="isChatting" class="self-start bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none shadow-sm border border-slate-100 dark:border-slate-700 w-[60%]"><span class="animate-pulse font-bold text-blue-500 text-[10px] tracking-widest uppercase">Thinking...</span></div>
             </div>
-            <div class="p-3 bg-white dark:bg-slate-800 border-t dark:border-slate-700 flex gap-2">
-                <input v-model="chatInput" @keyup.enter="sendChat" placeholder="詢問行情或策略..." class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-3 outline-none text-sm">
-                <button @click="sendChat" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl px-4 py-2 font-black text-sm">→</button>
-            </div>
+            <div class="p-3 bg-white dark:bg-slate-800 border-t dark:border-slate-700 flex gap-2"><input v-model="chatInput" @keyup.enter="sendChat" placeholder="詢問行情或策略..." class="flex-1 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl px-3 outline-none text-sm"><button @click="sendChat" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl px-4 py-2 font-black text-sm">→</button></div>
         </div>
         <button @click="showCopilot = !showCopilot" class="w-14 h-14 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition duration-300 focus:outline-none">💬</button>
     </div>
@@ -341,7 +316,6 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
-// 🔴 必填：請填入您的 Apps Script 新網址 (v4.4 終極版)
 const API_URL = 'https://script.google.com/macros/s/AKfycbxHbXuMMgVzTolDffl8EZQvmji-YQA_OIAPAcuXrU8T6_hJnpMVrgIXCQFhxdw_5st4/exec'; 
 
 createApp({
@@ -366,25 +340,30 @@ createApp({
         const sectorNews = ref([]);
         const isFetchingNews = ref(false);
 
-        // 🟢 第二層分類字典與圖示
         const FALLBACK_SECTOR_MAP = {
             'VKTX': 'BIO生技', 'NTLA': 'BIO生技', 'BEAM': 'BIO生技', 'NUVL': 'BIO生技', 'ETON': 'BIO生技', 'ASND': 'BIO生技',
             'UEC': 'NUC核能', 'LEU': 'NUC核能', 'MU': 'TECH硬體', 'WDC': 'TECH硬體', 'ACHR': 'EVTOL航空', 'JOBY': 'EVTOL航空'
         };
         const SECTOR_ICONS = { 'BIO生技': '🧬', 'NUC核能': '☢️', 'TECH硬體': '💻', 'EVTOL航空': '🚁', '未分類': '📁' };
 
-        // 🟢 板塊對標資訊庫 (Benchmarks Dictionary)
-        const SECTOR_BENCHMARKS = {
-            'BIO生技': { benchmarks: 'XBI (生技ETF) · LLY (禮來) · NVO (諾和諾德)', desc: '關注 FDA 批准、P1/P2/P3 臨床數據發布與併購 (M&A) 事件。' },
-            'NUC核能': { benchmarks: 'URA (鈾礦ETF) · URNM · CCJ (卡梅科)', desc: '關注鈾價現貨走勢、科技巨頭 SMR 投資與政府核能補貼計畫。' },
-            'TECH硬體': { benchmarks: 'SOXX (半導體ETF) · NVDA (輝達) · TSM (台積電)', desc: '關注晶片出貨量、大廠 AI 資本支出 (Capex) 與先進封裝產能緊缺度。' },
-            'EVTOL航空': { benchmarks: 'XAR (航空ETF) · ERJ (巴西航空)', desc: '關注 FAA 認證進度、試飛數據與商業化航線訂單。' },
-            '未分類': { benchmarks: 'SPY (標普500) · QQQ (納斯達克100)', desc: '尚未分類之標的，請在交易時透過「標籤:代號」進行歸類。' }
+        // 🟢 TV 基準對標代號設定 (可自訂)
+        const SECTOR_BENCHMARKS_SYMBOLS = {
+            'BIO生技': ['AMEX:XBI', 'NYSE:LLY', 'NYSE:NVO'],
+            'NUC核能': ['AMEX:URA', 'NYSE:CCJ', 'NASDAQ:CEG'],
+            'TECH硬體': ['NASDAQ:SOXX', 'NASDAQ:NVDA', 'NYSE:TSM'],
+            'EVTOL航空': ['AMEX:XAR', 'NYSE:JOBY', 'NYSE:ERJ'],
+            '未分類': ['AMEX:SPY', 'NASDAQ:QQQ', 'CRYPTO:BTCUSD']
         };
 
-        const getSectorInfo = (sectorName) => {
-            return SECTOR_BENCHMARKS[sectorName] || { benchmarks: '無專屬基準', desc: '追蹤該板塊之個股特定催化劑與錯定價修復空間。' };
+        const SECTOR_BENCHMARKS = {
+            'BIO生技': { desc: '關注 FDA 批准、臨床數據與併購 (M&A) 事件。' },
+            'NUC核能': { desc: '關注鈾價現貨走勢、科技巨頭投資與政策補貼。' },
+            'TECH硬體': { desc: '關注晶片出貨量、大廠資本支出與先進封裝產能。' },
+            'EVTOL航空': { desc: '關注 FAA 認證進度、試飛數據與商業化訂單。' },
+            '未分類': { desc: '尚未分類標的。交易時可輸入 [標籤:代號] 分類。' }
         };
+
+        const getSectorInfo = (sectorName) => { return SECTOR_BENCHMARKS[sectorName] || { desc: '追蹤該板塊個股催化劑與錯定價空間。' }; };
 
         onMounted(() => { 
             const cached = safeGetLocal('app_cache');
@@ -399,7 +378,33 @@ createApp({
             if(safeGetLocal('theme') === 'dark') document.documentElement.classList.add('dark');
         });
 
-        const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); safeSetLocal('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderChart(); };
+        // 🟢 渲染 TradingView 走勢圖函數
+        const renderTVWidgets = () => {
+            const symbols = SECTOR_BENCHMARKS_SYMBOLS[currentTab.value] || SECTOR_BENCHMARKS_SYMBOLS['未分類'];
+            const isDark = document.documentElement.classList.contains('dark');
+            symbols.forEach((sym, i) => {
+                const container = document.getElementById(`tv-widget-${i}`);
+                if(container) {
+                    container.innerHTML = '';
+                    const script = document.createElement('script');
+                    script.src = "https://s3.tradingview.com/external-embedding/embed-widget-mini-symbol-overview.js";
+                    script.async = true;
+                    script.innerHTML = JSON.stringify({
+                        "symbol": sym, "width": "100%", "height": "100%", "locale": "tw", 
+                        "dateRange": "3M", // 近三個月走勢
+                        "colorTheme": isDark ? "dark" : "light", "isTransparent": true, "autosize": true, "largeChartUrl": ""
+                    });
+                    container.appendChild(script);
+                }
+            });
+        };
+
+        const toggleDarkMode = () => { 
+            document.documentElement.classList.toggle('dark'); 
+            safeSetLocal('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); 
+            renderChart(); 
+            if(currentTab.value !== '全局') setTimeout(renderTVWidgets, 50); // 切換模式時重繪 TV
+        };
         const checkPassword = () => { if (!password.value) { const p = prompt('請輸入管理密碼:'); if (p) { password.value = p; safeSetLocal('p_pass', p); return true; } return false; } return true; };
 
         const fetchData = async (forceAlert = false) => {
@@ -409,14 +414,8 @@ createApp({
                 const res = await fetch(`${API_URL}?action=read&password=${encodeURIComponent(password.value)}`);
                 const data = await res.json();
                 if (data.status === 'error') throw new Error(data.message);
-                
                 transactions.value = data.transactions || []; marketData.value = data.marketData || {}; cashAdjustments.value = data.cashAdjustments || []; navHistoryData.value = data.navHistory || []; recommendations.value = (data.recommendations || []).map(r=>({...r, showDetails:false}));
-                
-                if (data.quantData) {
-                    Object.keys(quantData).forEach(k => delete quantData[k]);
-                    Object.assign(quantData, data.quantData);
-                }
-
+                if (data.quantData) { Object.keys(quantData).forEach(k => delete quantData[k]); Object.assign(quantData, data.quantData); }
                 safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData}));
             } catch (e) { if(forceAlert) alert(`同步失敗: ${e.message}`); } finally { isSyncing.value = false; }
         };
@@ -436,14 +435,9 @@ createApp({
 
         const parsedTransactions = computed(() => {
             return (transactions.value || []).map(t => {
-                let cleanSymbol = (t.symbol || '').toUpperCase();
-                let sector = '未分類';
-                if (cleanSymbol.includes(':')) {
-                    const parts = cleanSymbol.split(':');
-                    sector = parts[0].trim(); cleanSymbol = parts[1].trim();
-                } else if (FALLBACK_SECTOR_MAP[cleanSymbol]) {
-                    sector = FALLBACK_SECTOR_MAP[cleanSymbol];
-                }
+                let cleanSymbol = (t.symbol || '').toUpperCase(); let sector = '未分類';
+                if (cleanSymbol.includes(':')) { const parts = cleanSymbol.split(':'); sector = parts[0].trim(); cleanSymbol = parts[1].trim(); } 
+                else if (FALLBACK_SECTOR_MAP[cleanSymbol]) { sector = FALLBACK_SECTOR_MAP[cleanSymbol]; }
                 return { ...t, cleanSymbol, sector };
             });
         });
@@ -451,7 +445,6 @@ createApp({
         const dashboard = computed(() => {
             let cash = 0, holdings = {}, investedAmount = 0, totalRealized = 0, totalUnrealized = 0, totalDividend = 0;
             (cashAdjustments.value || []).forEach(a => cash += Number(a.amount));
-            
             [...parsedTransactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(t => {
                 const sym = t.cleanSymbol;
                 if(!holdings[sym]) holdings[sym] = {symbol: sym, sector: t.sector, shares:0, totalCost:0, avgCost:0, currentPrice:0, dayChange:0, yieldPct:0, unrealizedPnL:0};
@@ -460,7 +453,6 @@ createApp({
                 else { cash += amt; const c = holdings[sym].avgCost * Number(t.shares); totalRealized += (amt - c); holdings[sym].totalCost -= c; holdings[sym].shares -= Number(t.shares); }
                 if(holdings[sym].shares > 0) holdings[sym].avgCost = holdings[sym].totalCost / holdings[sym].shares;
             });
-
             for(let s in holdings) {
                 if(holdings[s].shares > 0) {
                     investedAmount += holdings[s].totalCost; holdings[s].currentPrice = (marketData.value || {})[s]?.price || 0; holdings[s].dayChange = (marketData.value || {})[s]?.change || 0; holdings[s].yieldPct = (marketData.value || {})[s]?.yield || 0; 
@@ -491,70 +483,43 @@ createApp({
 
         const currentSectorStats = computed(() => {
             if (currentTab.value === '全局' || !filteredHoldings.value) return { totalValue: 0, weightPercent: 0, avgNarrative: 0, avgShortage: 0 };
-            
             let totalValue = 0; let totalNarrative = 0; let totalShortage = 0; let countWithData = 0;
-            
             filteredHoldings.value.forEach(h => {
-                const val = h.shares * h.currentPrice;
-                totalValue += val;
-                if (quantData && quantData[h.symbol]) {
-                    totalNarrative += Number(quantData[h.symbol].narrative_score || 0);
-                    totalShortage += Number(quantData[h.symbol].shortage_momentum || 0);
-                    countWithData++;
-                }
+                const val = h.shares * h.currentPrice; totalValue += val;
+                if (quantData && quantData[h.symbol]) { totalNarrative += Number(quantData[h.symbol].narrative_score || 0); totalShortage += Number(quantData[h.symbol].shortage_momentum || 0); countWithData++; }
             });
-
             const weightPercent = (dashboard.value && dashboard.value.totalNav > 0) ? ((totalValue / dashboard.value.totalNav) * 100).toFixed(1) : 0;
             const avgNarrative = countWithData > 0 ? Math.round(totalNarrative / countWithData) : 0;
             const avgShortage = countWithData > 0 ? Math.round(totalShortage / countWithData) : 0;
-
             return { totalValue, weightPercent, avgNarrative, avgShortage };
         });
 
-        // 🟢 抓取板塊專屬最新新聞邏輯 (免後端 API，前端直連 Google News RSS)
+        // 🟢 監聽分頁切換，渲染圖表與抓取新聞
         watch(currentTab, async (newTab) => {
             if (newTab === '全局') { sectorNews.value = []; return; }
-            
-            sectorNews.value = [];
-            isFetchingNews.value = true;
-            // 抓取該板塊持倉最大的前 3 檔股票代號
+            nextTick(renderTVWidgets); // 觸發 TradingView 繪製
+
+            sectorNews.value = []; isFetchingNews.value = true;
             const topSymbols = [...filteredHoldings.value].sort((a,b) => (b.shares*b.currentPrice) - (a.shares*a.currentPrice)).slice(0, 3).map(h => h.symbol);
-            
             try {
                 for (const sym of topSymbols) {
                     const rssUrl = encodeURIComponent(`https://news.google.com/rss/search?q=${sym}+stock+news&hl=en-US&gl=US&ceid=US:en`);
-                    const apiEndpoint = `https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`;
-                    const res = await fetch(apiEndpoint);
+                    const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${rssUrl}`);
                     const data = await res.json();
-                    
                     if (data.status === 'ok' && data.items) {
-                        const items = data.items.slice(0, 2); // 每檔股票取最新的 2 則新聞
-                        items.forEach(item => {
-                            sectorNews.value.push({ symbol: sym, title: item.title, link: item.link, pubDate: item.pubDate });
-                        });
+                        data.items.slice(0, 2).forEach(item => { sectorNews.value.push({ symbol: sym, title: item.title, link: item.link, pubDate: item.pubDate }); });
                     }
                 }
-                // 將所有新聞依照時間由新到舊排序
                 sectorNews.value.sort((a,b) => new Date(b.pubDate) - new Date(a.pubDate));
-            } catch(e) {
-                console.warn("Fetch news error", e);
-            } finally {
-                isFetchingNews.value = false;
-            }
+            } catch(e) {} finally { isFetchingNews.value = false; }
         });
 
         const scanAllQuantRisk = async () => {
-            const now = Date.now();
-            let history = [];
+            const now = Date.now(); let history = [];
             try { history = JSON.parse(safeGetLocal('quant_scan_history', '[]')); } catch(e){}
-            
             history = history.filter(time => now - time < 86400000);
-            if (history.length >= 3) { alert("⛔ 頻率限制：\n您在過去 24 小時內已達 3 次掃描上限。"); return; }
-            if (history.length > 0) {
-                const timeSinceLast = now - Math.max(...history);
-                const sixHours = 6 * 60 * 60 * 1000;
-                if (timeSinceLast < sixHours) { alert(`⛔ 冷卻限制：\n距離下次可用掃描還需等待約 ${((sixHours - timeSinceLast) / 3600000).toFixed(1)} 小時。`); return; }
-            }
+            if (history.length >= 3) { alert("⛔ 頻率限制：您在過去 24 小時內已達 3 次掃描上限。"); return; }
+            if (history.length > 0) { const timeSinceLast = now - Math.max(...history); const sixHours = 6 * 60 * 60 * 1000; if (timeSinceLast < sixHours) { alert(`⛔ 冷卻限制：距離下次可用掃描還需等待約 ${((sixHours - timeSinceLast) / 3600000).toFixed(1)} 小時。`); return; } }
             if (!checkPassword()) return;
 
             isScanningAll.value = true;
@@ -564,7 +529,7 @@ createApp({
             const chunkSize = 3; let hasError = false;
             for (let i = 0; i < symbols.length; i += chunkSize) {
                 const chunk = symbols.slice(i, i + chunkSize);
-                chunk.forEach(sym => { quantData[sym].action_zone = '🚀 Qwen 運算中...'; });
+                chunk.forEach(sym => { quantData[sym].action_zone = '🚀 AI 運算中...'; });
                 try {
                     const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify(chunk))}&password=${encodeURIComponent(password.value)}`);
                     const d = await r.json();
@@ -594,7 +559,6 @@ createApp({
         };
 
         const reviewPortfolio = async () => { selectedSymbol.value = "Portfolio Review"; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; let pStr = `總資金: $${dashboard.value.totalNav.toFixed(0)}\n`; Object.keys(dashboard.value.holdings).forEach(s => { const h = dashboard.value.holdings[s]; if(h.shares > 0) pStr += `- ${s}: 佔比 ${((h.shares*h.currentPrice)/dashboard.value.totalNav*100).toFixed(1)}%\n`; }); try { const r = await fetch(`${API_URL}?action=review_portfolio&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 健檢失敗: ${e.message}`; } finally { aiLoading.value = false; } };
-        
         const runStressTest = async () => { 
             if (!checkPassword()) return;
             selectedSymbol.value = "Stress Test / VaR"; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; 
@@ -602,23 +566,8 @@ createApp({
             Object.keys(dashboard.value.holdings).forEach(s => { const h = dashboard.value.holdings[s]; if(h.shares > 0) pStr += `- ${s}: ${h.shares}股, 現值 $${(h.shares*h.currentPrice).toFixed(0)}, 佔比 ${((h.shares*h.currentPrice)/dashboard.value.totalNav*100).toFixed(1)}%\n`; }); 
             try { const r = await fetch(`${API_URL}?action=stress_test&portfolio=${encodeURIComponent(pStr)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 測試失敗: ${e.message}`; } finally { aiLoading.value = false; } 
         };
-
         const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(s)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
-        
-        const generateAnalysis = async () => { 
-            if (!recForm.symbol) return alert('請先輸入代號！'); 
-            if (!checkPassword()) return; 
-            isGeneratingAnalysis.value = true; 
-            try { 
-                const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(recForm.symbol)}&password=${encodeURIComponent(password.value)}`); 
-                const d = await r.json(); 
-                recForm.analysis = d.analysis; 
-            } catch(e) { 
-                alert(`AI 生成失敗`); 
-            } finally { 
-                isGeneratingAnalysis.value = false; 
-            } 
-        };
+        const generateAnalysis = async () => { if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return; isGeneratingAnalysis.value = true; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(recForm.symbol)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); recForm.analysis = d.analysis; } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; } };
 
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
@@ -667,10 +616,8 @@ createApp({
             dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats, quantData,
             sortedCash: computed(()=>[...cashAdjustments.value].reverse()), sortedRecommendations: computed(()=>[...recommendations.value].reverse()), 
             fetchData, saveData, toggleDarkMode, reviewPortfolio, runStressTest, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
-            scanAllQuantRisk, isScanningAll, isGeneratingAnalysis,
-            showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked, getRecTypeLabel, getRecTypeClass,
-            showCopilot, chatInput, chatHistory, sendChat, isChatting,
-            currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews 
+            scanAllQuantRisk, isScanningAll, isGeneratingAnalysis, showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked, getRecTypeLabel, getRecTypeClass,
+            showCopilot, chatInput, chatHistory, sendChat, isChatting, currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews 
         };
     }
 }).mount('#app');
