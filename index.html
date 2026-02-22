@@ -28,11 +28,71 @@
         .sidebar { width: 220px; flex-shrink: 0; overflow-y: auto; border-right: 1px solid #e2e8f0; }
         .dark .sidebar { border-right-color: #334155; }
         .main-content { flex-grow: 1; overflow-y: auto; padding: 1.5rem; }
-        @media (max-width: 1024px) {
+       @media (max-width: 1024px) {
             .layout-container { flex-direction: column; }
-            .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 1px solid #e2e8f0; display: flex; overflow-x: auto; white-space: nowrap; padding-bottom: 0.5rem; }
-            .sidebar-item { border-left: none; border-bottom: 3px solid transparent; padding: 0.5rem 1rem; }
-            .sidebar-item.active { border-left-color: transparent; border-bottom-color: #6366f1; }
+            
+            /* 🔴 iPhone 頂部膠囊導航列 (靈魂優化) */
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                border-right: none; 
+                display: flex; 
+                overflow-x: auto; 
+                white-space: nowrap; 
+                padding: 12px 16px; 
+                gap: 12px; /* 拉開按鈕間距，防誤觸 */
+                
+                /* iOS 滑順動能滾動關鍵 */
+                -webkit-overflow-scrolling: touch; 
+                /* 增加滑動的磁吸停頓感 */
+                scroll-snap-type: x mandatory; 
+                
+                background: rgba(255, 255, 255, 0.85);
+                backdrop-filter: blur(12px); /* 毛玻璃特效 */
+                border-bottom: 1px solid rgba(0,0,0,0.05);
+                
+                /* 讓導航列吸附在頂部，避開劉海 */
+                position: sticky;
+                top: var(--safe-top);
+                z-index: 40;
+            }
+            .dark .sidebar { 
+                background: rgba(15, 23, 42, 0.85); 
+                border-bottom-color: rgba(255,255,255,0.05); 
+            }
+            
+            /* 🔴 按鈕改為易點擊的「圓角膠囊」 */
+            .sidebar-item { 
+                scroll-snap-align: start; /* 磁吸對齊點 */
+                border-left: none !important; 
+                border-bottom: none !important; 
+                padding: 10px 20px !important; 
+                border-radius: 9999px !important; /* 膠囊形狀 */
+                background: #f1f5f9;
+                margin: 0 !important;
+                flex-shrink: 0;
+                display: flex;
+                align-items: center;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            }
+            .dark .sidebar-item { background: #1e293b; }
+            
+            /* 🟢 點中時的高亮特效 */
+            .sidebar-item.active { 
+                background: #6366f1 !important; 
+                color: #ffffff !important; 
+                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            }
+            .dark .sidebar-item.active { 
+                background: #6366f1 !important; 
+                color: #ffffff !important; 
+            }
+            
+            /* 讓膠囊內的計數器在點中時自動反白，確保對比度 */
+            .sidebar-item.active span:last-child {
+                background: rgba(255,255,255,0.2) !important;
+                color: white !important;
+            }
         }
         /* 展開動畫樣式 */
         details summary::-webkit-details-marker { display: none; }
