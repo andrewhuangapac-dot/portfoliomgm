@@ -505,9 +505,25 @@ createApp({
                 chunk.forEach(sym => { quantData[sym].action_zone = '🚀 三Agent辯論中...'; });
                 try {
                     const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify(chunk))}&password=${encodeURIComponent(password.value)}`);
+                    
+                    // 檢查 HTTP 狀態碼
+                    if (!r.ok) throw new Error(`HTTP 連線錯誤 (Status: ${r.status})`);
+                    
                     const d = await r.json();
-                    if (d.status === 'success') { Object.keys(d.data).forEach(sym => { quantData[sym] = d.data[sym]; }); } else { throw new Error(d.message); }
-                } catch(e) { chunk.forEach(sym => { quantData[sym].action_zone = '⚠️ 連線中斷'; }); hasError = true; }
+                    if (d.status === 'success') { 
+                        Object.keys(d.data).forEach(sym => { quantData[sym] = d.data[sym]; }); 
+                    } else { 
+                        throw new Error(d.message); 
+                    }
+                } catch(e) { 
+                    console.error(`掃描 ${chunk.join(',')} 發生錯誤:`, e);
+                    chunk.forEach(sym => { 
+                        quantData[sym].action_zone = `⚠️ 錯誤`; 
+                        // 把錯誤原因寫入報告區，讓您可以點開查看
+                        quantData[sym].report = `**掃描失敗原因：**\n${e.message}\n\n請檢查 API 金鑰是否可用，或重整網頁後再試。`;
+                    }); 
+                    hasError = true; 
+                }
             }
             
             isScanningAll.value = false;
@@ -515,7 +531,9 @@ createApp({
                 history.push(Date.now()); safeSetLocal('quant_scan_history', JSON.stringify(history));
                 safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData, dynamicBenchmarks: dynamicBenchmarks.value, aiSectorMap: aiSectorMap.value}));
                 alert("✅ 掃描完成！記得點擊「儲存」備份。"); 
-            } else { alert("⚠️ 部分掃描發生錯誤。"); }
+            } else { 
+                alert("⚠️ 部分掃描發生錯誤，請點擊雷達表中的「⚠️ 錯誤 ▼」查看具體原因。"); 
+            }
         };
 
         const sendChat = async () => {
