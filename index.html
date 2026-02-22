@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>美股量化戰情室 v4.8 (持倉精簡版)</title>
+    <title>美股量化戰情室 v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -51,7 +51,7 @@
     <div class="sidebar bg-white dark:bg-slate-900 p-4 no-scrollbar z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div class="mb-8 hidden lg:block">
             <h1 class="text-xl font-black tracking-tight leading-none">Quant<br><span class="text-indigo-600 dark:text-indigo-400">Terminal</span></h1>
-            <span class="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-1.5 py-0.5 rounded font-black tracking-widest uppercase mt-1 inline-block">v4.8 Summary</span>
+            <span class="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-1.5 py-0.5 rounded font-black tracking-widest uppercase mt-1 inline-block">v5.0 Stable</span>
         </div>
         
         <div class="text-[10px] font-black uppercase text-slate-400 mb-2 px-3 tracking-widest hidden lg:block">投資組合視角</div>
@@ -116,27 +116,52 @@
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                 <div class="lg:col-span-3 bg-slate-100 dark:bg-slate-800/60 p-5 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
                     <div class="flex justify-between items-center mb-4">
-                        <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">👑 板塊基準 ETF (近3個月走勢)</span>
+                        <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">👑 板塊基準 ETF 動能</span>
                         <span class="text-[10px] text-slate-500 bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700">{{ getSectorInfo(currentTab).desc }}</span>
                     </div>
-                    <div class="flex-1 relative w-full h-32 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex items-center justify-center">
-                        <span v-if="isFetchingHistory" class="text-xs text-slate-400 animate-pulse">抓取歷史股價中...</span>
-                        <canvas v-else id="benchmarkChart"></canvas>
-                        <div v-if="!isFetchingHistory && benchmarkHistory.pctChange !== undefined && benchmarkHistory.symbol" class="absolute top-3 left-4">
-                            <span class="font-black text-lg">{{ benchmarkHistory.symbol }}</span>
-                            <span class="ml-2 font-mono text-sm" :class="benchmarkHistory.pctChange >= 0 ? 'text-up' : 'text-down'">{{ benchmarkHistory.pctChange >= 0 ? '+' : '' }}{{ benchmarkHistory.pctChange }}%</span>
+                    <div class="flex-1 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col justify-center p-6 min-h-[128px]">
+                        <div v-if="isFetchingHistory" class="text-xs text-slate-400 animate-pulse text-center w-full">抓取歷史報價中...</div>
+                        <div v-else-if="benchmarkHistory.symbol" class="flex items-center justify-between">
+                            <div class="flex flex-col">
+                                <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">基準標的</span>
+                                <span class="font-black text-3xl">{{ benchmarkHistory.symbol }}</span>
+                            </div>
+                            <div class="flex gap-8 text-right">
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">近 30 天</span>
+                                    <span class="font-black text-2xl font-mono" :class="benchmarkHistory.pct30d >= 0 ? 'text-up' : 'text-down'">{{ benchmarkHistory.pct30d >= 0 ? '+' : '' }}{{ benchmarkHistory.pct30d }}%</span>
+                                </div>
+                                <div class="flex flex-col">
+                                    <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">近 90 天</span>
+                                    <span class="font-black text-2xl font-mono" :class="benchmarkHistory.pct90d >= 0 ? 'text-up' : 'text-down'">{{ benchmarkHistory.pct90d >= 0 ? '+' : '' }}{{ benchmarkHistory.pct90d }}%</span>
+                                </div>
+                            </div>
                         </div>
+                        <div v-else class="text-xs text-slate-400 text-center w-full">暫無 ETF 數據</div>
                     </div>
                 </div>
 
                 <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm lg:col-span-1 flex flex-col">
-                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-3 tracking-widest flex items-center gap-1">🏆 該板塊市場強勢股</h3>
-                    <div class="flex-1 flex flex-col gap-2">
-                        <div v-for="(sym, i) in getSectorGainers(currentTab)" :key="sym" class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
-                            <span class="font-black text-sm flex items-center gap-2"><span class="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 rounded text-slate-500 font-mono">{{i+1}}</span> {{ sym }}</span>
-                            <span class="text-[10px] text-slate-400">Alpha 候選</span>
-                        </div>
-                        <div v-if="getSectorGainers(currentTab).length === 0" class="text-xs text-slate-400 text-center py-4">請點擊上方 [AI智能分類] 尋找</div>
+                    <h3 class="text-[11px] font-black uppercase text-slate-500 mb-3 tracking-widest flex items-center gap-1">🏆 板塊 Alpha 強勢股</h3>
+                    <div class="flex-1 flex flex-col gap-2 justify-center">
+                        <div v-if="isFetchingHistory" class="text-xs text-slate-400 animate-pulse text-center w-full py-4">抓取中...</div>
+                        <template v-else>
+                            <div v-for="(sym, i) in getSectorGainers(currentTab)" :key="sym" class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] bg-slate-200 dark:bg-slate-700 px-1.5 rounded text-slate-500 font-mono">{{i+1}}</span> 
+                                    <span class="font-black text-sm uppercase">{{ sym }}</span>
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="text-[9px] text-slate-400 mb-0.5 tracking-widest">30天 / 90天</span>
+                                    <div class="text-[11px] font-black font-mono flex gap-1.5">
+                                        <span :class="(sectorGainersData[sym]?.pct30d || 0) >= 0 ? 'text-up' : 'text-down'">{{ (sectorGainersData[sym]?.pct30d || 0) >= 0 ? '+' : '' }}{{ sectorGainersData[sym]?.pct30d || '...' }}%</span>
+                                        <span class="text-slate-300 dark:text-slate-600">/</span>
+                                        <span :class="(sectorGainersData[sym]?.pct90d || 0) >= 0 ? 'text-up' : 'text-down'">{{ (sectorGainersData[sym]?.pct90d || 0) >= 0 ? '+' : '' }}{{ sectorGainersData[sym]?.pct90d || '...' }}%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div v-if="getSectorGainers(currentTab).length === 0" class="text-xs text-slate-400 text-center py-4">請點擊上方 [AI智能分類] 尋找</div>
+                        </template>
                     </div>
                 </div>
             </div>
@@ -285,15 +310,17 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbxos1IRaAAo9M_u-FpYeryicaUx6uygdfktyo8D0HrogViCCTnB05jSUj-EFR8lCCI1/exec'; 
+const API_URL = 'https://script.google.com/macros/s/AKfycbwj-lD_iGjr13ixrKMlU1O0WhYolZV9SR8G3NhjLGjx0Dq3a8lHgRiBXrhNJkGuAuvy/exec'; 
 
 createApp({
     setup() {
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); const recommendations = ref([]);
         const navHistoryData = ref([]); 
         const isSyncing = ref(false); const isReorganizing = ref(false);
-        const isFetchingHistory = ref(false); const benchmarkHistory = reactive({ symbol: '', prices: [], pctChange: 0 });
-        let benchChartInstance = null;
+        const isFetchingHistory = ref(false); 
+        
+        const benchmarkHistory = reactive({ symbol: '', pct30d: 0, pct90d: 0 });
+        const sectorGainersData = ref({}); // 存放強勢股的 30/90 天資料
         
         const safeGetLocal = (key, defaultVal = '') => { try { return localStorage.getItem(key) || defaultVal; } catch(e) { return defaultVal; } };
         const safeSetLocal = (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} };
@@ -341,7 +368,7 @@ createApp({
             } catch (e) { alert(`AI 重組失敗: ${e.message}`); } finally { isReorganizing.value = false; }
         };
 
-        const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); safeSetLocal('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); drawBenchmarkChart(); renderChart(); };
+        const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); safeSetLocal('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderChart(); };
         const checkPassword = () => { if (!password.value) { const p = prompt('請輸入管理密碼:'); if (p) { password.value = p; safeSetLocal('p_pass', p); return true; } return false; } return true; };
 
         const fetchData = async (forceAlert = false) => {
@@ -380,11 +407,11 @@ createApp({
         });
 
         const dashboard = computed(() => {
-            let cash = 0, holdings = {}, investedAmount = 0, totalRealized = 0, totalUnrealized = 0, totalDividend = 0;
+            let cash = 0, holdings = {}, investedAmount = 0, totalRealized = 0, totalUnrealized = 0;
             (cashAdjustments.value || []).forEach(a => cash += Number(a.amount));
             [...parsedTransactions.value].sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(t => {
                 const sym = t.cleanSymbol;
-                if(!holdings[sym]) holdings[sym] = {symbol: sym, sector: t.sector, shares:0, totalCost:0, avgCost:0, currentPrice:0, dayChange:0, yieldPct:0, unrealizedPnL:0};
+                if(!holdings[sym]) holdings[sym] = {symbol: sym, sector: t.sector, shares:0, totalCost:0, avgCost:0, currentPrice:0, unrealizedPnL:0};
                 const amt = Number(t.price) * Number(t.shares);
                 if ((t.type || '').toLowerCase() === 'buy') { cash -= amt; holdings[sym].totalCost += amt; holdings[sym].shares += Number(t.shares); holdings[sym].sector = t.sector; } 
                 else { cash += amt; const c = holdings[sym].avgCost * Number(t.shares); totalRealized += (amt - c); holdings[sym].totalCost -= c; holdings[sym].shares -= Number(t.shares); }
@@ -393,14 +420,13 @@ createApp({
             for(let s in holdings) {
                 if(holdings[s].shares > 0) {
                     investedAmount += holdings[s].totalCost; 
-                    holdings[s].currentPrice = (marketData.value || {})[s]?.price || 0; 
-                    holdings[s].dayChange = (marketData.value || {})[s]?.change || 0; 
+                    holdings[s].currentPrice = marketData.value[s] ? marketData.value[s].price : 0; 
                     holdings[s].unrealizedPnL = (holdings[s].currentPrice * holdings[s].shares) - holdings[s].totalCost;
                     holdings[s].unrealizedPnLPercent = holdings[s].totalCost > 0 ? ((holdings[s].unrealizedPnL / holdings[s].totalCost) * 100).toFixed(2) : 0;
-                    totalUnrealized += holdings[s].unrealizedPnL; totalDividend += (holdings[s].shares * holdings[s].currentPrice * (holdings[s].yieldPct / 100)); 
+                    totalUnrealized += holdings[s].unrealizedPnL; 
                 }
             }
-            return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalDividend, totalNav: cash + investedAmount + totalUnrealized };
+            return { cash, holdings, investedAmount, totalRealized, totalUnrealized, totalNav: cash + investedAmount + totalUnrealized };
         });
 
         const sectorList = computed(() => {
@@ -423,44 +449,41 @@ createApp({
         const currentSectorStats = computed(() => {
             if (currentTab.value === '全局' || !filteredHoldings.value) return null;
             let totalValue = 0;
-            filteredHoldings.value.forEach(h => {
-                const val = h.shares * h.currentPrice; totalValue += val;
-            });
+            filteredHoldings.value.forEach(h => { const val = h.shares * h.currentPrice; totalValue += val; });
             const weightPercent = (dashboard.value && dashboard.value.totalNav > 0) ? ((totalValue / dashboard.value.totalNav) * 100).toFixed(1) : 0;
             return { totalValue, weightPercent };
         });
 
-        const drawBenchmarkChart = () => {
-            if (currentTab.value === '全局') return;
-            const ctx = document.getElementById('benchmarkChart');
-            if (!ctx || benchmarkHistory.prices.length === 0) return;
-            
-            if (benchChartInstance) benchChartInstance.destroy();
-            const color = benchmarkHistory.pctChange >= 0 ? '#10b981' : '#ef4444'; 
-            const bgColor = benchmarkHistory.pctChange >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)';
-
-            benchChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: { labels: benchmarkHistory.prices.map((_, i) => i), datasets: [{ data: benchmarkHistory.prices, borderColor: color, backgroundColor: bgColor, borderWidth: 2, fill: true, tension: 0.1, pointRadius: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } }, layout: { padding: { top: 40 } } }
-            });
-        };
-
+        // 🟢 將 ETF 與 Alpha 強勢股合併向後端請求 30/90 天漲跌幅
         watch(currentTab, async (newTab) => {
             if (newTab === '全局') { sectorNews.value = []; return; }
             
             const etf = getSectorETF(newTab);
-            if(etf) {
+            const gainers = getSectorGainers(newTab);
+            const symbolsToFetch = [];
+            if(etf) symbolsToFetch.push(etf);
+            if(gainers && gainers.length > 0) symbolsToFetch.push(...gainers);
+
+            if(symbolsToFetch.length > 0) {
                 isFetchingHistory.value = true;
                 try {
-                    const res = await fetch(`${API_URL}?action=get_history&symbols=${encodeURIComponent(JSON.stringify([etf]))}&password=${encodeURIComponent(password.value)}`);
+                    const res = await fetch(`${API_URL}?action=get_history&symbols=${encodeURIComponent(JSON.stringify(symbolsToFetch))}&password=${encodeURIComponent(password.value)}`);
                     const data = await res.json();
-                    if(data.status === 'success' && data.data[etf]) {
-                        benchmarkHistory.symbol = etf; benchmarkHistory.prices = data.data[etf].prices; benchmarkHistory.pctChange = data.data[etf].pctChange;
-                        nextTick(drawBenchmarkChart);
-                    } else { benchmarkHistory.prices = []; }
+                    if(data.status === 'success') {
+                        if(etf && data.data[etf]) {
+                            benchmarkHistory.symbol = etf; 
+                            benchmarkHistory.pct30d = data.data[etf].pct30d || 0;
+                            benchmarkHistory.pct90d = data.data[etf].pct90d || 0;
+                        }
+                        sectorGainersData.value = {}; // 清空舊資料
+                        if(gainers) {
+                            gainers.forEach(sym => {
+                                if(data.data[sym]) sectorGainersData.value[sym] = data.data[sym];
+                            });
+                        }
+                    }
                 } catch(e) {} finally { isFetchingHistory.value = false; }
-            } else { benchmarkHistory.prices = []; }
+            } else { benchmarkHistory.symbol = ''; sectorGainersData.value = {}; }
 
             sectorNews.value = []; isFetchingNews.value = true;
             const topSymbols = [...filteredHoldings.value].sort((a,b) => (b.shares*b.currentPrice) - (a.shares*a.currentPrice)).slice(0, 3).map(h => h.symbol);
@@ -489,7 +512,7 @@ createApp({
         };
 
         const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(s)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
-        const generateAnalysis = async () => { if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return; isGeneratingAnalysis.value = true; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(recForm.symbol)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); recForm.analysis = d.analysis; } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; } };
+        const generateAnalysis = async () => { if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return; isGeneratingAnalysis.value = true; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(recForm.symbol)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); recForm.analysis = d.report || d.analysis || JSON.stringify(d); } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; } };
 
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
@@ -538,7 +561,7 @@ createApp({
             sortedRecommendations: computed(()=>[...recommendations.value].sort((a,b)=>new Date(b.date)-new Date(a.date))), 
             fetchData, saveData, toggleDarkMode, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
             isGeneratingAnalysis, showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked,
-            currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews, dynamicBenchmarks, aiSectorMap, runAutoSectorMap, isReorganizing, getSectorGainers, isFetchingHistory, benchmarkHistory,
+            currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews, dynamicBenchmarks, aiSectorMap, runAutoSectorMap, isReorganizing, getSectorGainers, isFetchingHistory, benchmarkHistory, sectorGainersData,
             showCopilot, chatInput, chatHistory, sendChat, isChatting, marketData
         };
     }
