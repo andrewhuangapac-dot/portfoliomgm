@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>美股量化戰情室 v4.8 (戰略滾動版)</title>
+    <title>美股量化戰情室 v4.8 (持倉精簡版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -15,12 +15,6 @@
         .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .markdown-content p { margin-bottom: 12px; } .markdown-content h3 { font-weight: 900; margin-top: 16px; margin-bottom: 8px; color: #0f172a; }
         .dark .markdown-content h3 { color: #f8fafc; } .markdown-content ul { list-style-type: disc; padding-left: 20px; }
-        .progress-bar-bg { background: #e2e8f0; border-radius: 4px; height: 5px; width: 100%; overflow: hidden; }
-        .dark .progress-bar-bg { background: #334155; }
-        .progress-fill-red { background: linear-gradient(90deg, #ef4444, #f97316); }
-        .progress-fill-blue { background: linear-gradient(90deg, #3b82f6, #0ea5e9); }
-        .progress-fill-green { background: linear-gradient(90deg, #10b981, #14b8a6); }
-        .progress-fill-purple { background: linear-gradient(90deg, #8b5cf6, #c084fc); }
         .sidebar-item { transition: all 0.2s ease-in-out; border-left: 4px solid transparent; }
         .sidebar-item.active { border-left-color: #6366f1; background-color: rgba(99, 102, 241, 0.1); color: #4f46e5; font-weight: 900; }
         .dark .sidebar-item.active { color: #818cf8; background-color: rgba(99, 102, 241, 0.2); }
@@ -29,37 +23,26 @@
         .dark .sidebar { border-right-color: #334155; }
         .main-content { flex-grow: 1; overflow-y: auto; padding: 1.5rem; }
         
-        /* 🔴 針對手機版 (iPhone) 的頂部選單優化 */
         @media (max-width: 1024px) {
             .layout-container { flex-direction: column; }
             .sidebar { 
-                width: 100%; 
-                height: auto; 
-                border-right: none; 
-                border-bottom: 1px solid #e2e8f0; 
-                display: flex; 
-                overflow-x: auto; 
-                white-space: nowrap; 
-                /* ⚠️ 加入蘋果 Safe Area 變數，把選單往下推，避開時間與電量列 */
-                padding-top: calc(env(safe-area-inset-top) + 0.5rem);
-                padding-bottom: 0.5rem; 
-                -webkit-overflow-scrolling: touch; /* 加入滑順滾動 */
+                width: 100%; height: auto; border-right: none; display: flex; overflow-x: auto; white-space: nowrap; 
+                padding: calc(16px + env(safe-area-inset-top, 40px)) 16px 16px 16px; gap: 12px; 
+                -webkit-overflow-scrolling: touch; scroll-snap-type: x mandatory; 
+                background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.05);
+                position: sticky; top: 0; z-index: 40;
             }
-            .sidebar-item { 
-                border-left: none; 
-                border-bottom: 3px solid transparent; 
-                padding: 0.5rem 1rem; 
-            }
-            .sidebar-item.active { 
-                border-left-color: transparent; 
-                border-bottom-color: #6366f1; 
-            }
+            .dark .sidebar { background: rgba(15, 23, 42, 0.85); border-bottom-color: rgba(255,255,255,0.05); }
+            .sidebar-item { scroll-snap-align: start; border-left: none !important; border-bottom: none !important; padding: 10px 20px !important; border-radius: 9999px !important; background: #f1f5f9; margin: 0 !important; flex-shrink: 0; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+            .dark .sidebar-item { background: #1e293b; }
+            .sidebar-item.active { background: #6366f1 !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4); }
+            .sidebar-item.active span:last-child { background: rgba(255,255,255,0.2) !important; color: white !important; }
         }
-
-        /* 展開動畫樣式 */
+        details { outline: none; }
+        details summary { cursor: pointer; list-style: none; user-select: none; }
         details summary::-webkit-details-marker { display: none; }
         details[open] summary ~ * { animation: slideDown 0.3s ease-in-out; }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
@@ -68,7 +51,7 @@
     <div class="sidebar bg-white dark:bg-slate-900 p-4 no-scrollbar z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div class="mb-8 hidden lg:block">
             <h1 class="text-xl font-black tracking-tight leading-none">Quant<br><span class="text-indigo-600 dark:text-indigo-400">Terminal</span></h1>
-            <span class="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-1.5 py-0.5 rounded font-black tracking-widest uppercase mt-1 inline-block">v4.8 Stable</span>
+            <span class="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-1.5 py-0.5 rounded font-black tracking-widest uppercase mt-1 inline-block">v4.8 Summary</span>
         </div>
         
         <div class="text-[10px] font-black uppercase text-slate-400 mb-2 px-3 tracking-widest hidden lg:block">投資組合視角</div>
@@ -131,7 +114,6 @@
         </div>
 
         <div v-show="currentTab !== '全局'">
-            
             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                 <div class="lg:col-span-3 bg-slate-100 dark:bg-slate-800/60 p-5 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
                     <div class="flex justify-between items-center mb-4">
@@ -160,36 +142,41 @@
                 </div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" v-if="currentSectorStats">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" v-if="currentSectorStats">
                 <div class="bg-gradient-to-br from-indigo-50 to-blue-50 dark:from-indigo-900/30 dark:to-blue-900/20 p-5 rounded-[2rem] border border-indigo-100 dark:border-indigo-800/50 shadow-sm flex flex-col justify-center"><p class="text-[10px] text-indigo-500 dark:text-indigo-400 font-black uppercase tracking-widest mb-1">板塊資金權重</p><p class="text-3xl font-black text-indigo-700 dark:text-indigo-300">{{ currentSectorStats.weightPercent || 0 }}%</p></div>
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-center"><p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">板塊平均敘事共識</p><p class="text-3xl font-black" :class="(currentSectorStats.avgNarrative || 0) > 70 ? 'text-blue-500' : 'text-slate-600'">{{ currentSectorStats.avgNarrative || 0 }}<span class="text-sm ml-1 text-slate-400">/100</span></p></div>
-                <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-center"><p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">板塊平均緊缺動能</p><p class="text-3xl font-black" :class="(currentSectorStats.avgShortage || 0) > 70 ? 'text-purple-500' : 'text-slate-600'">{{ currentSectorStats.avgShortage || 0 }}<span class="text-sm ml-1 text-slate-400">/100</span></p></div>
+                <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm flex flex-col justify-center"><p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">板塊總價值</p><p class="text-3xl font-black text-slate-700 dark:text-slate-300">${{ formatCurrency(currentSectorStats.totalValue, 0) }}</p></div>
             </div>
         </div>
 
         <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm mb-6">
             <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <span class="font-black text-xs uppercase text-slate-500">💼 {{ currentTab === '全局' ? '四大支柱量化雷達 (全持倉)' : currentTab + ' 板塊雷達' }}</span>
-                <button v-if="currentTab === '全局'" @click="scanAllQuantRisk" :disabled="isScanningAll" class="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-black px-4 py-2 rounded-xl shadow-lg transition flex items-center gap-2">
-                    <span v-if="isScanningAll" class="animate-pulse">⏳ 三 Agent 委員會激辯中...</span>
-                    <span v-else>🚀 執行全持倉深度掃描</span>
-                </button>
+                <span class="font-black text-xs uppercase text-slate-500">💼 {{ currentTab === '全局' ? '持倉概要' : currentTab + ' 板塊持倉概要' }}</span>
+                <span class="text-[10px] font-bold text-slate-400">💡 每日盤前 AI 雷達將自動推送至您的 Telegram</span>
             </div>
             <div class="overflow-x-auto no-scrollbar">
-                <table class="w-full text-sm min-w-[1000px]">
+                <table class="w-full text-sm min-w-[800px]">
                     <thead class="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px] uppercase font-bold">
-                        <tr><th class="p-4 text-left">標的</th><th class="p-4 text-right">均價 / 現價</th><th class="p-4 text-right">未實現損益</th><th class="p-4 text-left w-56">🎯 策略核心</th><th class="p-4 text-left w-56">🔥 動能與套利</th><th class="p-4 text-left w-48">🛡️ 操作指令</th></tr>
+                        <tr>
+                            <th class="p-4 text-left">標的</th>
+                            <th class="p-4 text-right">持股數量</th>
+                            <th class="p-4 text-right">均價 / 現價</th>
+                            <th class="p-4 text-right">近90天漲跌幅</th>
+                            <th class="p-4 text-right">未實現損益</th>
+                        </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
                         <tr v-for="h in (filteredHoldings || [])" :key="h.symbol" class="hover:bg-slate-50 dark:hover:bg-slate-700 transition">
-                            <td class="p-4 font-black text-lg">{{ h.symbol }}<div class="mt-0.5"><span class="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded mr-1">{{ h.sector }}</span><span class="text-[10px] font-normal text-slate-400">{{ h.shares }} 股</span></div></td>
+                            <td class="p-4 font-black text-lg">{{ h.symbol }}<div class="mt-0.5"><span class="text-[9px] bg-slate-100 dark:bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded mr-1">{{ h.sector }}</span></div></td>
+                            <td class="p-4 text-right font-mono font-bold text-slate-600 dark:text-slate-300">{{ h.shares }}</td>
                             <td class="p-4 text-right font-mono text-slate-500 dark:text-slate-400">${{ formatCurrency(h.avgCost, 2) }}<span class="block text-[12px] font-bold text-blue-500 dark:text-blue-400">${{ formatCurrency(h.currentPrice, 2) }}</span></td>
-                            <td class="p-4 text-right font-black font-mono" :class="h.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">${{ formatCurrency(h.unrealizedPnL, 0) }}<span class="block text-[10px] opacity-70">{{ h.unrealizedPnLPercent }}%</span></td>
-                            <td class="p-4"><div v-if="quantData && quantData[h.symbol]"><div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5"><span>敘事閉環</span><span>{{quantData[h.symbol].narrative_score}}%</span></div><div class="progress-bar-bg mb-2"><div class="h-full progress-fill-blue" :style="{width: quantData[h.symbol].narrative_score + '%'}"></div></div><div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5" :class="quantData[h.symbol].catalyst_prob > 65 ? 'text-red-500' : ''"><span>硬催化劑機率</span><span>{{quantData[h.symbol].catalyst_prob}}%</span></div><div class="progress-bar-bg"><div class="h-full" :class="quantData[h.symbol].catalyst_prob > 65 ? 'progress-fill-red' : 'progress-fill-blue'" :style="{width: quantData[h.symbol].catalyst_prob + '%'}"></div></div></div><span v-else class="text-[10px] text-slate-400 italic">等待掃描...</span></td>
-                            <td class="p-4"><div v-if="quantData && quantData[h.symbol]"><div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5"><span>行業緊缺動能</span><span>{{quantData[h.symbol].shortage_momentum}}%</span></div><div class="progress-bar-bg mb-2"><div class="h-full progress-fill-purple" :style="{width: quantData[h.symbol].shortage_momentum + '%'}"></div></div><div class="flex justify-between text-[9px] font-bold text-slate-500 mb-0.5"><span>錯定價修復空間</span><span>{{quantData[h.symbol].mispricing_gap}}%</span></div><div class="progress-bar-bg"><div class="h-full progress-fill-green" :style="{width: quantData[h.symbol].mispricing_gap + '%'}"></div></div></div><span v-else class="text-[10px] text-slate-400 italic">-</span></td>
-                            <td class="p-4"><div v-if="quantData && quantData[h.symbol]"><div class="text-[10px] font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 p-1.5 rounded-lg leading-snug">{{quantData[h.symbol].action_zone}}</div></div><span v-else class="text-[10px] text-slate-400 italic">-</span></td>
+                            <td class="p-4 text-right font-black font-mono" :class="(marketData[h.symbol]?.change90d || 0) >= 0 ? 'text-up' : 'text-down'">
+                                {{ (marketData[h.symbol]?.change90d || 0) >= 0 ? '+' : '' }}{{ formatCurrency(marketData[h.symbol]?.change90d, 2) }}%
+                            </td>
+                            <td class="p-4 text-right font-black font-mono" :class="h.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">
+                                ${{ formatCurrency(h.unrealizedPnL, 0) }}<span class="block text-[10px] opacity-70">{{ h.unrealizedPnLPercent }}%</span>
+                            </td>
                         </tr>
-                        <tr v-if="(!filteredHoldings || filteredHoldings.length === 0)"><td colspan="6" class="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">此板塊目前無持倉</td></tr>
+                        <tr v-if="(!filteredHoldings || filteredHoldings.length === 0)"><td colspan="5" class="p-8 text-center text-slate-400 text-xs font-bold uppercase tracking-widest">此板塊目前無持倉</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -267,6 +254,13 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
+                    <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月獲利</div>
+                    <div class="max-h-48 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
+                        <div v-for="s in monthlyStats" :key="s.month" class="p-4 flex justify-between text-sm"><span class="font-bold text-slate-500 uppercase">{{ s.month }}</span><span :class="s.pnl >= 0 ? 'text-up' : 'text-down'" class="font-black font-mono">{{ s.pnl >= 0 ? '+' : '' }}${{ formatCurrency(s.pnl, 0) }}</span></div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -291,14 +285,14 @@
 
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
-
-const API_URL = 'https://script.google.com/macros/s/AKfycbyysfwDWUWI-4vH5Lj4bAgPodSrnTZvUCrB77Luu5JD0fThPci05lxERuaWrXEyLiol/exec'; 
+const API_URL = 'https://script.google.com/macros/s/AKfycbyZn0ZGkDPSNUyKZpWvT3q19GLvt8_Z2RUBMJPAD_Z-cDIuF22VKeMFrnkhp761OmfM/exec'; 
 
 createApp({
     setup() {
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); const recommendations = ref([]);
-        const navHistoryData = ref([]); const quantData = reactive({});
-        const isSyncing = ref(false); const isScanningAll = ref(false); const isReorganizing = ref(false);
+        const navHistoryData = ref([]); 
+        // 移除了 quantData 狀態
+        const isSyncing = ref(false); const isReorganizing = ref(false);
         const isFetchingHistory = ref(false); const benchmarkHistory = reactive({ symbol: '', prices: [], pctChange: 0 });
         let benchChartInstance = null;
         
@@ -327,7 +321,6 @@ createApp({
                 try {
                     const p = JSON.parse(cached);
                     transactions.value = p.transactions||[]; marketData.value = p.marketData||{}; cashAdjustments.value = p.cashAdjustments||[]; recommendations.value = p.recommendations||[]; navHistoryData.value = p.navHistory||[];
-                    if (p.quantData) Object.assign(quantData, p.quantData); 
                     if (p.aiSectorMap) aiSectorMap.value = p.aiSectorMap;
                     if (p.dynamicBenchmarks) dynamicBenchmarks.value = p.dynamicBenchmarks; 
                 } catch(e) {}
@@ -360,10 +353,9 @@ createApp({
                 const data = await res.json();
                 if (data.status === 'error') throw new Error(data.message);
                 transactions.value = data.transactions || []; marketData.value = data.marketData || {}; cashAdjustments.value = data.cashAdjustments || []; navHistoryData.value = data.navHistory || []; recommendations.value = data.recommendations || [];
-                if (data.quantData) { Object.keys(quantData).forEach(k => delete quantData[k]); Object.assign(quantData, data.quantData); }
                 if (data.dynamicBenchmarks) dynamicBenchmarks.value = data.dynamicBenchmarks;
                 if (data.aiSectorMap) aiSectorMap.value = data.aiSectorMap;
-                safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData, dynamicBenchmarks: dynamicBenchmarks.value, aiSectorMap: aiSectorMap.value}));
+                safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, dynamicBenchmarks: dynamicBenchmarks.value, aiSectorMap: aiSectorMap.value}));
             } catch (e) { if(forceAlert) alert(`同步失敗: ${e.message}`); } finally { isSyncing.value = false; }
         };
 
@@ -371,7 +363,7 @@ createApp({
             if (!checkPassword()) return;
             if (!confirm('確認儲存並記錄當前淨值嗎？')) return;
             try {
-                const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, currentNav: dashboard.value.totalNav, quantData: quantData };
+                const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, currentNav: dashboard.value.totalNav };
                 const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, { method: 'POST', body: JSON.stringify(payload) });
                 const d = await res.json();
                 if(d.status === 'error') throw new Error(d.message);
@@ -431,15 +423,12 @@ createApp({
 
         const currentSectorStats = computed(() => {
             if (currentTab.value === '全局' || !filteredHoldings.value) return null;
-            let totalValue = 0; let totalNarrative = 0; let totalShortage = 0; let countWithData = 0;
+            let totalValue = 0;
             filteredHoldings.value.forEach(h => {
                 const val = h.shares * h.currentPrice; totalValue += val;
-                if (quantData && quantData[h.symbol]) { totalNarrative += Number(quantData[h.symbol].narrative_score || 0); totalShortage += Number(quantData[h.symbol].shortage_momentum || 0); countWithData++; }
             });
             const weightPercent = (dashboard.value && dashboard.value.totalNav > 0) ? ((totalValue / dashboard.value.totalNav) * 100).toFixed(1) : 0;
-            const avgNarrative = countWithData > 0 ? Math.round(totalNarrative / countWithData) : 0;
-            const avgShortage = countWithData > 0 ? Math.round(totalShortage / countWithData) : 0;
-            return { totalValue, weightPercent, avgNarrative, avgShortage };
+            return { totalValue, weightPercent };
         });
 
         const drawBenchmarkChart = () => {
@@ -486,55 +475,6 @@ createApp({
                 sectorNews.value.sort((a,b) => new Date(b.pubDate) - new Date(a.pubDate));
             } catch(e) {} finally { isFetchingNews.value = false; }
         });
-
-        const scanAllQuantRisk = async () => {
-            const now = Date.now(); let history = [];
-            try { history = JSON.parse(safeGetLocal('quant_scan_history', '[]')); } catch(e){}
-            history = history.filter(time => now - time < 86400000);
-            if (history.length >= 3) { alert("⛔ 頻率限制：您在過去 24 小時內已達 3 次掃描上限。"); return; }
-            if (history.length > 0) { const timeSinceLast = now - Math.max(...history); const sixHours = 6 * 60 * 60 * 1000; if (timeSinceLast < sixHours) { alert(`⛔ 冷卻限制：距離下次可用掃描還需等待約 ${((sixHours - timeSinceLast) / 3600000).toFixed(1)} 小時。`); return; } }
-            if (!checkPassword()) return;
-
-            isScanningAll.value = true;
-            const symbols = Object.keys(dashboard.value.holdings).filter(s => dashboard.value.holdings[s].shares > 0);
-            symbols.forEach(sym => { quantData[sym] = { catalyst_prob: 0, narrative_score: 0, shortage_momentum: 0, mispricing_gap: 0, atr_percent: '...', action_zone: '⏳ 準備掃描...' }; });
-
-            const chunkSize = 1; let hasError = false;
-            for (let i = 0; i < symbols.length; i += chunkSize) {
-                const chunk = symbols.slice(i, i + chunkSize);
-                chunk.forEach(sym => { quantData[sym].action_zone = '🚀 三Agent辯論中...'; });
-                try {
-                    const r = await fetch(`${API_URL}?action=quant_scan_all&symbols=${encodeURIComponent(JSON.stringify(chunk))}&password=${encodeURIComponent(password.value)}`);
-                    
-                    // 檢查 HTTP 狀態碼
-                    if (!r.ok) throw new Error(`HTTP 連線錯誤 (Status: ${r.status})`);
-                    
-                    const d = await r.json();
-                    if (d.status === 'success') { 
-                        Object.keys(d.data).forEach(sym => { quantData[sym] = d.data[sym]; }); 
-                    } else { 
-                        throw new Error(d.message); 
-                    }
-                } catch(e) { 
-                    console.error(`掃描 ${chunk.join(',')} 發生錯誤:`, e);
-                    chunk.forEach(sym => { 
-                        quantData[sym].action_zone = `⚠️ 錯誤`; 
-                        // 把錯誤原因寫入報告區，讓您可以點開查看
-                        quantData[sym].report = `**掃描失敗原因：**\n${e.message}\n\n請檢查 API 金鑰是否可用，或重整網頁後再試。`;
-                    }); 
-                    hasError = true; 
-                }
-            }
-            
-            isScanningAll.value = false;
-            if (!hasError) { 
-                history.push(Date.now()); safeSetLocal('quant_scan_history', JSON.stringify(history));
-                safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, quantData: quantData, dynamicBenchmarks: dynamicBenchmarks.value, aiSectorMap: aiSectorMap.value}));
-                alert("✅ 掃描完成！記得點擊「儲存」備份。"); 
-            } else { 
-                alert("⚠️ 部分掃描發生錯誤，請點擊雷達表中的「⚠️ 錯誤 ▼」查看具體原因。"); 
-            }
-        };
 
         const sendChat = async () => {
             if(!chatInput.value.trim() || isChatting.value) return;
@@ -602,13 +542,13 @@ createApp({
         const monthlyStats = computed(() => { const s = {}; sortedTransactions.value.forEach(t => { if((t.type || '').toLowerCase()==='sell' && t.realizedPnL) { const m = t.date.substring(0,7); s[m] = (s[m]||0) + t.realizedPnL; } }); return Object.keys(s).sort().reverse().map(m => ({ month: m, pnl: s[m] })); });
 
         return { 
-            dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats, quantData,
+            dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats,
             sortedCash: computed(()=>[...cashAdjustments.value].reverse()), 
             sortedRecommendations: computed(()=>[...recommendations.value].sort((a,b)=>new Date(b.date)-new Date(a.date))), 
             fetchData, saveData, toggleDarkMode, reviewPortfolio, runStressTest, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
-            scanAllQuantRisk, isScanningAll, isGeneratingAnalysis, showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked,
+            isGeneratingAnalysis, showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked,
             currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews, dynamicBenchmarks, aiSectorMap, runAutoSectorMap, isReorganizing, getSectorGainers, isFetchingHistory, benchmarkHistory,
-            showCopilot, chatInput, chatHistory, sendChat, isChatting
+            showCopilot, chatInput, chatHistory, sendChat, isChatting, marketData
         };
     }
 }).mount('#app');
