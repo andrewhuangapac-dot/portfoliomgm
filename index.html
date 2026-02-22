@@ -28,69 +28,34 @@
         .sidebar { width: 220px; flex-shrink: 0; overflow-y: auto; border-right: 1px solid #e2e8f0; }
         .dark .sidebar { border-right-color: #334155; }
         .main-content { flex-grow: 1; overflow-y: auto; padding: 1.5rem; }
-      @media (max-width: 1024px) {
+        
+        /* 🔴 針對手機版 (iPhone) 的頂部選單優化 */
+        @media (max-width: 1024px) {
             .layout-container { flex-direction: column; }
-            
-            /* 🔴 iPhone 頂部膠囊導航列 (修復狀態列重疊) */
             .sidebar { 
                 width: 100%; 
                 height: auto; 
                 border-right: none; 
+                border-bottom: 1px solid #e2e8f0; 
                 display: flex; 
                 overflow-x: auto; 
                 white-space: nowrap; 
-                
-                /* ⚠️ 核心修復：在上方 padding 加入蘋果系統的安全距離 (Safe Area) */
-                /* 這樣按鈕會自動避開劉海/動態島，但毛玻璃背景依然會填滿頂部 */
-                padding: calc(16px + env(safe-area-inset-top, 40px)) 16px 16px 16px; 
-                gap: 12px; 
-                
-                -webkit-overflow-scrolling: touch; 
-                scroll-snap-type: x mandatory; 
-                
-                background: rgba(255, 255, 255, 0.85);
-                backdrop-filter: blur(12px); 
-                border-bottom: 1px solid rgba(0,0,0,0.05);
-                
-                position: sticky;
-                top: 0;
-                z-index: 40;
+                /* ⚠️ 加入蘋果 Safe Area 變數，把選單往下推，避開時間與電量列 */
+                padding-top: calc(env(safe-area-inset-top) + 0.5rem);
+                padding-bottom: 0.5rem; 
+                -webkit-overflow-scrolling: touch; /* 加入滑順滾動 */
             }
-            .dark .sidebar { 
-                background: rgba(15, 23, 42, 0.85); 
-                border-bottom-color: rgba(255,255,255,0.05); 
-            }
-            
             .sidebar-item { 
-                scroll-snap-align: start; 
-                border-left: none !important; 
-                border-bottom: none !important; 
-                padding: 10px 20px !important; 
-                border-radius: 9999px !important; 
-                background: #f1f5f9;
-                margin: 0 !important;
-                flex-shrink: 0;
-                display: flex;
-                align-items: center;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+                border-left: none; 
+                border-bottom: 3px solid transparent; 
+                padding: 0.5rem 1rem; 
             }
-            .dark .sidebar-item { background: #1e293b; }
-            
             .sidebar-item.active { 
-                background: #6366f1 !important; 
-                color: #ffffff !important; 
-                box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-            }
-            .dark .sidebar-item.active { 
-                background: #6366f1 !important; 
-                color: #ffffff !important; 
-            }
-            
-            .sidebar-item.active span:last-child {
-                background: rgba(255,255,255,0.2) !important;
-                color: white !important;
+                border-left-color: transparent; 
+                border-bottom-color: #6366f1; 
             }
         }
+
         /* 展開動畫樣式 */
         details summary::-webkit-details-marker { display: none; }
         details[open] summary ~ * { animation: slideDown 0.3s ease-in-out; }
