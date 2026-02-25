@@ -353,20 +353,26 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
+// 🚨 請替換為您最新部署的 GAS 網址
 const API_URL = 'https://script.google.com/macros/s/AKfycbzDjY13OL5Dxl2vgz0Wmx8-HRtUjtfeaWcnCVRO9U2GEtHq0Bj6QXwYjMKwqzB9sTph/exec'; 
 
 createApp({
     setup() {
+        // --- 核心狀態 ---
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); 
         const recommendations = ref([]); const navHistoryData = ref([]); 
         
+        // --- UI 狀態 ---
         const isSyncing = ref(false); const isReorganizing = ref(false); const isFetchingHistory = ref(false); 
         const benchmarkHistory = reactive({ symbol: '', pct30d: 0, pct90d: 0 });
         const sectorGainersData = ref({}); 
         
         const password = ref(localStorage.getItem('p_pass') || '');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
+        
+        // 🟢 擴充：加入 positionPct (持倉佔比)
         const recForm = reactive({ symbol: '', type: 'New', price: '', count: 1, positionPct: '', analysis: '' });
+        
         const searchQuery = ref(''); 
         
         // 🛡️ 強制設定為 false，確保初始狀態絕對不會跳出
@@ -381,6 +387,7 @@ createApp({
         const currentTab = ref('全局'); const sectorNews = ref([]); const isFetchingNews = ref(false);
         const aiSectorMap = ref({}); const dynamicBenchmarks = ref({});
 
+        // --- 輔助函數 ---
         const safeSetLocal = (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} };
         const checkPassword = () => { if (!password.value) { const p = prompt('請輸入管理密碼:'); if (p) { password.value = p; safeSetLocal('p_pass', p); return true; } return false; } return true; };
         const formatCurrency = (v, d=0) => (Number(v)||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
@@ -389,8 +396,9 @@ createApp({
         const getSectorGainers = (sectorName) => { return (dynamicBenchmarks.value[sectorName] && dynamicBenchmarks.value[sectorName].top_gainers) ? dynamicBenchmarks.value[sectorName].top_gainers : []; };
         const getSectorInfo = (sectorName) => { return (dynamicBenchmarks.value[sectorName] && dynamicBenchmarks.value[sectorName].desc) ? { desc: dynamicBenchmarks.value[sectorName].desc } : { desc: '請點擊上方 [✨ AI智能分類] 建立資訊' }; };
 
+        // --- 初始化載入 ---
         onMounted(() => { 
-            // 確保網頁一載入就強制關閉 modal
+            // 🛡️ 雙重保險：網頁一載入就強制關閉 modal
             showCashModal.value = false;
             showAIModal.value = false;
 
@@ -398,6 +406,7 @@ createApp({
             if (cached) {
                 try {
                     const p = JSON.parse(cached);
+                    // 🛡️ 防呆：確保必定是陣列
                     transactions.value = Array.isArray(p.transactions) ? p.transactions : []; 
                     marketData.value = p.marketData||{}; cashAdjustments.value = p.cashAdjustments||[]; 
                     recommendations.value = Array.isArray(p.recommendations) ? p.recommendations : []; 
@@ -410,6 +419,7 @@ createApp({
             if(localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
         });
 
+        // --- API 呼叫 ---
         const fetchData = async (forceAlert = false) => {
             if (!checkPassword()) return;
             isSyncing.value = true;
@@ -418,6 +428,7 @@ createApp({
                 const data = await res.json();
                 if (data.status === 'error') throw new Error(data.message);
                 
+                // 🛡️ 強制確保從後端收到的是陣列
                 transactions.value = Array.isArray(data.transactions) ? data.transactions : []; 
                 marketData.value = data.marketData || {}; 
                 cashAdjustments.value = Array.isArray(data.cashAdjustments) ? data.cashAdjustments : []; 
@@ -442,6 +453,7 @@ createApp({
             } catch(e) { alert(`儲存失敗: ${e.message}`); }
         };
 
+        // 🛠️ 背景靜默存檔 (專供發布戰略自動同步使用)
         const silentSave = async () => {
             if (!password.value) return;
             try {
@@ -462,6 +474,7 @@ createApp({
             } catch (e) { alert(`AI 重組失敗: ${e.message}`); } finally { isReorganizing.value = false; }
         };
 
+        // --- 核心資產計算 ---
         const parsedTransactions = computed(() => {
             return (transactions.value || []).map(t => {
                 let cleanSymbol = String(t.symbol || '').toUpperCase().trim(); 
@@ -476,6 +489,7 @@ createApp({
             let cash = 0, holdings = {}, investedAmount = 0, totalRealized = 0, totalUnrealized = 0;
             (cashAdjustments.value || []).forEach(a => cash += Number(a.amount || 0));
             
+            // 🛡️ 安全排序：過濾無效日期
             const safeSortedTxs = [...parsedTransactions.value].sort((a,b) => {
                 let dateA = new Date(a.date).getTime(); let dateB = new Date(b.date).getTime();
                 if (isNaN(dateA)) dateA = 0; if (isNaN(dateB)) dateB = 0;
@@ -537,6 +551,7 @@ createApp({
             return { totalValue, weightPercent };
         });
 
+        // --- 視圖切換與資料抓取 ---
         watch(currentTab, async (newTab) => {
             if (newTab === '全局') { sectorNews.value = []; return; }
             
@@ -578,6 +593,7 @@ createApp({
             } catch(e) {} finally { isFetchingNews.value = false; }
         });
 
+        // --- AI 助理與分析 ---
         const sendChat = async () => {
             if(!chatInput.value.trim() || isChatting.value) return;
             const text = chatInput.value; chatHistory.value.push({ role: 'user', text }); chatInput.value = ''; isChatting.value = true;
@@ -594,6 +610,7 @@ createApp({
         const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(s)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
         const generateAnalysis = async () => { if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return; isGeneratingAnalysis.value = true; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(recForm.symbol)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); recForm.analysis = d.report || d.analysis || JSON.stringify(d); } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; } };
 
+        // --- 圖表渲染 ---
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
             if (currentTab.value !== '全局') return;
@@ -608,6 +625,7 @@ createApp({
                 }
                 
                 const ctxLine = document.getElementById('navChart');
+                // 🛡️ 防呆：確保歷史淨值陣列存在再畫圖
                 if(ctxLine && navHistoryData.value && Array.isArray(navHistoryData.value) && navHistoryData.value.length > 0) {
                     if(lineChart) lineChart.destroy();
                     const history = [...navHistoryData.value].sort((a,b) => {
@@ -625,27 +643,31 @@ createApp({
         watch(() => [dashboard.value?.holdings, navHistoryData.value, currentTab.value], renderChart, { deep: true });
         const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); safeSetLocal('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderChart(); };
 
+        // --- 表單操作 ---
         const addTransaction = () => { if(!form.symbol) return; transactions.value.push({id:Date.now(), ...form, symbol: form.symbol.toUpperCase()}); form.symbol=''; form.price=''; form.shares=''; };
         const removeTransaction = (id) => { if(confirm('刪除交易？')) transactions.value = transactions.value.filter(t=>t.id!==id); };
         const addCashAdjustment = () => { if(!cashForm.amount) return; cashAdjustments.value.push({id:Date.now(), ...cashForm}); showCashModal.value=false; cashForm.amount=''; cashForm.note=''; };
         
+        // 🟢 擴充：發布戰略時加入 positionPct 並靜默存檔
         const addRecommendation = async () => { 
             if(!recForm.symbol) return; 
             const newRec = { 
                 id:Date.now(), date:new Date().toISOString().split('T')[0], 
                 symbol:recForm.symbol.toUpperCase(), type:recForm.type, 
                 price:recForm.price, count:recForm.count, 
-                positionPct:recForm.positionPct, 
+                positionPct:recForm.positionPct, // 寫入佔比
                 analysis:recForm.analysis 
             }; 
             recommendations.value.push(newRec); 
-            recForm.symbol=''; recForm.analysis=''; recForm.count=1; recForm.positionPct='';
+            recForm.symbol=''; recForm.analysis=''; recForm.count=1; recForm.positionPct=''; // 清空
             await silentSave(); 
         };
         const removeRecommendation = async (id) => { if(confirm('刪除這筆戰略發布？')) { recommendations.value = recommendations.value.filter(r=>r.id!==id); await silentSave(); } };
         
+        // --- 🛡️ 強化容錯版：歷史交易損益與月份統計 ---
         const sortedTransactions = computed(() => {
             let historySim = {};
+            
             let txs = [...(transactions.value || [])].sort((a,b) => {
                 let dateA = new Date(a.date).getTime(); let dateB = new Date(b.date).getTime();
                 if (isNaN(dateA)) dateA = 0; if (isNaN(dateB)) dateB = 0;
@@ -655,6 +677,7 @@ createApp({
             let enrichedTxs = txs.map(t => {
                 const sym = String(t.symbol || '').toUpperCase().trim(); 
                 if(!sym) return {...t, realizedPnL: 0};
+                
                 if(!historySim[sym]) historySim[sym] = { shares: 0, totalCost: 0, avg: 0 };
                 
                 let currentTxPnL = 0; 
