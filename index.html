@@ -3,13 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>美股量化戰情室 v5.0</title>
+    <title>美股量化戰情室 v5.0 (黑金機構版)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class' }</script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* 🛡️ 終極防閃爍：在 Vue 準備好之前，隱藏所有帶有 v-cloak 的元素 */
+        [v-cloak] { display: none !important; }
+        
         body { font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s ease; }
         .text-up { color: #10b981; } .text-down { color: #ef4444; } 
         .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -46,7 +49,7 @@
     </style>
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200">
-<div id="app" class="layout-container">
+<div id="app" v-cloak class="layout-container">
     
     <div class="sidebar bg-white dark:bg-slate-900 p-4 no-scrollbar z-10 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         <div class="mb-8 hidden lg:block">
@@ -239,7 +242,7 @@
                 </div>
             </div>
 
-           <div class="space-y-6">
+            <div class="space-y-6">
                 <div class="bg-white dark:bg-slate-800 shadow-2xl rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col max-h-[800px]">
                     <div class="p-5 bg-slate-900 dark:bg-black text-white font-black text-xs uppercase flex justify-between items-center z-10 shrink-0">
                         <span>📢 戰略公告發布與歷史</span>
@@ -252,13 +255,11 @@
                                 <option value="New">建倉</option><option value="Add">加碼</option><option value="Reduce">減碼</option><option value="Clear">清倉</option>
                             </select>
                         </div>
-                        
                         <div class="flex gap-2">
                             <input v-model.number="recForm.price" type="number" step="0.01" placeholder="目標價格" class="w-1/3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                             <input v-model.number="recForm.count" type="number" placeholder="AI信心" class="w-1/3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
                             <input v-model.number="recForm.positionPct" type="number" placeholder="佔比(%)" class="w-1/3 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700 p-3 rounded-xl text-sm font-black text-indigo-700 dark:text-indigo-400 outline-none">
                         </div>
-                        
                         <button @click="generateAnalysis" :disabled="isGeneratingAnalysis" class="w-full py-2.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-xl text-[11px] font-black border border-purple-200 dark:border-purple-800 hover:bg-purple-200 dark:hover:bg-purple-800 transition">{{ isGeneratingAnalysis ? '⏳ Qwen 深度運算中...' : '✨ 自動生成 AI 觀點' }}</button>
                         <textarea v-model="recForm.analysis" rows="3" placeholder="敘事邏輯或催化劑說明..." class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-[11px] outline-none"></textarea>
                         <button @click="addRecommendation" class="w-full bg-slate-800 hover:bg-slate-700 text-white py-3 rounded-xl font-black text-xs shadow-lg transition">發布至對外看板</button>
@@ -292,7 +293,6 @@
                         </div>
                     </div>
                 </div>
-        </div>
 
                 <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
                     <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月獲利</div>
@@ -333,8 +333,8 @@
             </div>
         </div>
     </div>
-
-    <div v-if="showCashModal" @click.self="showCashModal=false" class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 transition-opacity" style="display: none;" :style="{ display: showCashModal ? 'flex' : 'none' }">
+    
+    <div v-if="showCashModal" @click.self="showCashModal=false" class="fixed inset-0 bg-black/60 flex items-center justify-center z-[60] p-4 transition-opacity">
         <div class="bg-white dark:bg-slate-800 p-6 rounded-3xl w-full max-w-xs shadow-2xl border border-slate-100 dark:border-slate-700">
             <h3 class="font-black mb-4 uppercase text-xs border-b dark:border-slate-700 pb-2">Cash Adjustment</h3>
             <div class="space-y-4">
@@ -353,16 +353,13 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
-// 🚨 請替換為您最新部署的 GAS 網址
 const API_URL = 'https://script.google.com/macros/s/AKfycbzDjY13OL5Dxl2vgz0Wmx8-HRtUjtfeaWcnCVRO9U2GEtHq0Bj6QXwYjMKwqzB9sTph/exec'; 
 
 createApp({
     setup() {
-        // --- 核心狀態 ---
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); 
         const recommendations = ref([]); const navHistoryData = ref([]); 
         
-        // --- UI 狀態 ---
         const isSyncing = ref(false); const isReorganizing = ref(false); const isFetchingHistory = ref(false); 
         const benchmarkHistory = reactive({ symbol: '', pct30d: 0, pct90d: 0 });
         const sectorGainersData = ref({}); 
@@ -370,12 +367,11 @@ createApp({
         const password = ref(localStorage.getItem('p_pass') || '');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         
-        // 🟢 擴充：加入 positionPct (持倉佔比)
         const recForm = reactive({ symbol: '', type: 'New', price: '', count: 1, positionPct: '', analysis: '' });
         
         const searchQuery = ref(''); 
         
-        // 🛡️ 強制設定為 false，確保初始狀態絕對不會跳出
+        // 🛡️ 確保預設絕對隱藏
         const showCashModal = ref(false); 
         const showAIModal = ref(false); 
         
@@ -387,7 +383,6 @@ createApp({
         const currentTab = ref('全局'); const sectorNews = ref([]); const isFetchingNews = ref(false);
         const aiSectorMap = ref({}); const dynamicBenchmarks = ref({});
 
-        // --- 輔助函數 ---
         const safeSetLocal = (key, val) => { try { localStorage.setItem(key, val); } catch(e) {} };
         const checkPassword = () => { if (!password.value) { const p = prompt('請輸入管理密碼:'); if (p) { password.value = p; safeSetLocal('p_pass', p); return true; } return false; } return true; };
         const formatCurrency = (v, d=0) => (Number(v)||0).toLocaleString('en-US', {minimumFractionDigits:d, maximumFractionDigits:d});
@@ -396,9 +391,7 @@ createApp({
         const getSectorGainers = (sectorName) => { return (dynamicBenchmarks.value[sectorName] && dynamicBenchmarks.value[sectorName].top_gainers) ? dynamicBenchmarks.value[sectorName].top_gainers : []; };
         const getSectorInfo = (sectorName) => { return (dynamicBenchmarks.value[sectorName] && dynamicBenchmarks.value[sectorName].desc) ? { desc: dynamicBenchmarks.value[sectorName].desc } : { desc: '請點擊上方 [✨ AI智能分類] 建立資訊' }; };
 
-        // --- 初始化載入 ---
         onMounted(() => { 
-            // 🛡️ 雙重保險：網頁一載入就強制關閉 modal
             showCashModal.value = false;
             showAIModal.value = false;
 
@@ -406,7 +399,6 @@ createApp({
             if (cached) {
                 try {
                     const p = JSON.parse(cached);
-                    // 🛡️ 防呆：確保必定是陣列
                     transactions.value = Array.isArray(p.transactions) ? p.transactions : []; 
                     marketData.value = p.marketData||{}; cashAdjustments.value = p.cashAdjustments||[]; 
                     recommendations.value = Array.isArray(p.recommendations) ? p.recommendations : []; 
@@ -419,7 +411,6 @@ createApp({
             if(localStorage.getItem('theme') === 'dark') document.documentElement.classList.add('dark');
         });
 
-        // --- API 呼叫 ---
         const fetchData = async (forceAlert = false) => {
             if (!checkPassword()) return;
             isSyncing.value = true;
@@ -428,7 +419,6 @@ createApp({
                 const data = await res.json();
                 if (data.status === 'error') throw new Error(data.message);
                 
-                // 🛡️ 強制確保從後端收到的是陣列
                 transactions.value = Array.isArray(data.transactions) ? data.transactions : []; 
                 marketData.value = data.marketData || {}; 
                 cashAdjustments.value = Array.isArray(data.cashAdjustments) ? data.cashAdjustments : []; 
@@ -453,7 +443,6 @@ createApp({
             } catch(e) { alert(`儲存失敗: ${e.message}`); }
         };
 
-        // 🛠️ 背景靜默存檔 (專供發布戰略自動同步使用)
         const silentSave = async () => {
             if (!password.value) return;
             try {
@@ -474,7 +463,6 @@ createApp({
             } catch (e) { alert(`AI 重組失敗: ${e.message}`); } finally { isReorganizing.value = false; }
         };
 
-        // --- 核心資產計算 ---
         const parsedTransactions = computed(() => {
             return (transactions.value || []).map(t => {
                 let cleanSymbol = String(t.symbol || '').toUpperCase().trim(); 
@@ -489,7 +477,6 @@ createApp({
             let cash = 0, holdings = {}, investedAmount = 0, totalRealized = 0, totalUnrealized = 0;
             (cashAdjustments.value || []).forEach(a => cash += Number(a.amount || 0));
             
-            // 🛡️ 安全排序：過濾無效日期
             const safeSortedTxs = [...parsedTransactions.value].sort((a,b) => {
                 let dateA = new Date(a.date).getTime(); let dateB = new Date(b.date).getTime();
                 if (isNaN(dateA)) dateA = 0; if (isNaN(dateB)) dateB = 0;
@@ -551,7 +538,6 @@ createApp({
             return { totalValue, weightPercent };
         });
 
-        // --- 視圖切換與資料抓取 ---
         watch(currentTab, async (newTab) => {
             if (newTab === '全局') { sectorNews.value = []; return; }
             
@@ -593,7 +579,6 @@ createApp({
             } catch(e) {} finally { isFetchingNews.value = false; }
         });
 
-        // --- AI 助理與分析 ---
         const sendChat = async () => {
             if(!chatInput.value.trim() || isChatting.value) return;
             const text = chatInput.value; chatHistory.value.push({ role: 'user', text }); chatInput.value = ''; isChatting.value = true;
@@ -610,7 +595,6 @@ createApp({
         const openAIModal = async (s) => { selectedSymbol.value = s; showAIModal.value = true; aiLoading.value = true; aiContent.value = ''; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(s)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); aiContent.value = d.analysis; } catch(e) { aiContent.value = `❌ 讀取失敗: ${e.message}`; } finally { aiLoading.value = false; } };
         const generateAnalysis = async () => { if (!recForm.symbol) return alert('請先輸入代號！'); if (!checkPassword()) return; isGeneratingAnalysis.value = true; try { const r = await fetch(`${API_URL}?action=analyze&symbol=${encodeURIComponent(recForm.symbol)}&password=${encodeURIComponent(password.value)}`); const d = await r.json(); recForm.analysis = d.report || d.analysis || JSON.stringify(d); } catch(e) { alert(`AI 生成失敗`); } finally { isGeneratingAnalysis.value = false; } };
 
-        // --- 圖表渲染 ---
         let pieChart = null; let lineChart = null;
         const renderChart = () => {
             if (currentTab.value !== '全局') return;
@@ -625,7 +609,6 @@ createApp({
                 }
                 
                 const ctxLine = document.getElementById('navChart');
-                // 🛡️ 防呆：確保歷史淨值陣列存在再畫圖
                 if(ctxLine && navHistoryData.value && Array.isArray(navHistoryData.value) && navHistoryData.value.length > 0) {
                     if(lineChart) lineChart.destroy();
                     const history = [...navHistoryData.value].sort((a,b) => {
@@ -643,28 +626,25 @@ createApp({
         watch(() => [dashboard.value?.holdings, navHistoryData.value, currentTab.value], renderChart, { deep: true });
         const toggleDarkMode = () => { document.documentElement.classList.toggle('dark'); safeSetLocal('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light'); renderChart(); };
 
-        // --- 表單操作 ---
         const addTransaction = () => { if(!form.symbol) return; transactions.value.push({id:Date.now(), ...form, symbol: form.symbol.toUpperCase()}); form.symbol=''; form.price=''; form.shares=''; };
         const removeTransaction = (id) => { if(confirm('刪除交易？')) transactions.value = transactions.value.filter(t=>t.id!==id); };
         const addCashAdjustment = () => { if(!cashForm.amount) return; cashAdjustments.value.push({id:Date.now(), ...cashForm}); showCashModal.value=false; cashForm.amount=''; cashForm.note=''; };
         
-        // 🟢 擴充：發布戰略時加入 positionPct 並靜默存檔
         const addRecommendation = async () => { 
             if(!recForm.symbol) return; 
             const newRec = { 
                 id:Date.now(), date:new Date().toISOString().split('T')[0], 
                 symbol:recForm.symbol.toUpperCase(), type:recForm.type, 
                 price:recForm.price, count:recForm.count, 
-                positionPct:recForm.positionPct, // 寫入佔比
+                positionPct:recForm.positionPct, 
                 analysis:recForm.analysis 
             }; 
             recommendations.value.push(newRec); 
-            recForm.symbol=''; recForm.analysis=''; recForm.count=1; recForm.positionPct=''; // 清空
+            recForm.symbol=''; recForm.analysis=''; recForm.count=1; recForm.positionPct='';
             await silentSave(); 
         };
         const removeRecommendation = async (id) => { if(confirm('刪除這筆戰略發布？')) { recommendations.value = recommendations.value.filter(r=>r.id!==id); await silentSave(); } };
         
-        // --- 🛡️ 強化容錯版：歷史交易損益與月份統計 ---
         const sortedTransactions = computed(() => {
             let historySim = {};
             
