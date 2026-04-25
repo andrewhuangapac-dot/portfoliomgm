@@ -10,9 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.0.2/marked.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* 🛡️ 終極防閃爍：在 Vue 準備好之前，隱藏所有帶有 v-cloak 的元素 */
         [v-cloak] { display: none !important; }
-        
         body { font-family: -apple-system, sans-serif; -webkit-tap-highlight-color: transparent; transition: background-color 0.3s ease; }
         .text-up { color: #10b981; } .text-down { color: #ef4444; } 
         .no-scrollbar::-webkit-scrollbar { display: none; } .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -116,7 +114,7 @@
         </div>
 
         <div v-show="currentTab !== '全局'">
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
+             <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 mb-6">
                 <div class="lg:col-span-3 bg-slate-100 dark:bg-slate-800/60 p-5 rounded-[2rem] border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col">
                     <div class="flex justify-between items-center mb-4">
                         <span class="text-xs font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">👑 板塊基準 ETF 動能</span>
@@ -221,7 +219,7 @@
 
         <div v-show="currentTab === '全局'" class="grid grid-cols-1 lg:grid-cols-4 gap-6">
             <div class="lg:col-span-3">
-                <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm">
+                <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm mb-6">
                     <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex justify-between items-center"><span class="font-black text-xs uppercase text-slate-500">📜 歷史交易紀錄</span><input v-model="searchQuery" type="text" placeholder="🔍 搜尋代號..." class="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 outline-none w-28 text-center font-bold"></div>
                     <div class="overflow-y-auto no-scrollbar max-h-[600px]">
                         <table class="w-full text-sm min-w-[500px]">
@@ -270,7 +268,6 @@
                         
                         <div v-for="r in sortedRecommendations" :key="r.id" class="p-4 bg-slate-50 dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-700 relative group">
                             <button @click="removeRecommendation(r.id)" class="absolute top-3 right-3 text-slate-300 hover:text-red-500 font-bold text-lg leading-none">&times;</button>
-                            
                             <div class="flex justify-between items-center mb-1">
                                 <div class="flex items-center gap-2">
                                     <span class="font-black text-lg uppercase">{{ r.symbol }}</span>
@@ -278,12 +275,10 @@
                                 </div>
                                 <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 mr-4">{{ r.type }}</span>
                             </div>
-                            
                             <div class="flex justify-between items-center mb-3">
                                 <span class="text-[10px] text-slate-400 font-mono">{{ r.date }}</span>
                                 <span class="text-xs font-bold text-slate-600 dark:text-slate-400 mr-4">@${{ formatCurrency(r.price, 2) }}</span>
                             </div>
-
                             <details v-if="r.analysis" class="group/analysis outline-none cursor-pointer">
                                 <summary class="text-[10px] font-black text-blue-500 hover:text-blue-600 transition outline-none list-none flex items-center gap-1 select-none">
                                     <span class="group-open/analysis:rotate-90 transition-transform duration-200">▶</span> 查看 AI 深度解讀
@@ -291,6 +286,27 @@
                                 <div class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-[11px] text-slate-600 dark:text-slate-400 markdown-content cursor-text" v-html="marked.parse(r.analysis)"></div>
                             </details>
                         </div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 shadow-2xl rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col">
+                    <div class="p-5 bg-red-900 dark:bg-red-950 text-white font-black text-xs uppercase flex justify-between items-center z-10 shrink-0">
+                        <span>🎥 影音推薦對外發布窗口</span>
+                    </div>
+                    <div class="p-5 bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 shrink-0 flex gap-2">
+                        <input type="date" v-model="videoForm.date" class="w-1/3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm font-mono outline-none">
+                        <input v-model="videoForm.symbol" placeholder="美股代號" class="w-1/3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 p-3 rounded-xl text-sm uppercase font-black outline-none">
+                        <button @click="addVideoRec" class="w-1/3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-xs shadow-lg transition">發布至小工具</button>
+                    </div>
+                    <div class="p-5 overflow-y-auto max-h-[300px] space-y-2 bg-white dark:bg-slate-800/50">
+                        <div v-for="v in recentVideoRecs" :key="v.id" class="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-700">
+                            <div>
+                                <span class="font-black uppercase text-lg text-slate-800 dark:text-slate-200">{{ v.symbol }}</span>
+                                <span class="text-[10px] text-slate-400 font-mono ml-2">{{ v.date }}</span>
+                            </div>
+                            <button @click="removeVideoRec(v.id)" class="text-slate-400 hover:text-red-500 font-black text-lg leading-none">&times;</button>
+                        </div>
+                        <div v-if="recentVideoRecs.length === 0" class="text-xs text-slate-400 text-center py-2 font-bold tracking-widest">近 7 日無影音推薦發布</div>
                     </div>
                 </div>
 
@@ -359,6 +375,7 @@ createApp({
     setup() {
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); 
         const recommendations = ref([]); const navHistoryData = ref([]); 
+        const videoRecs = ref([]); // 🟢 新增：影音推薦陣列
         
         const isSyncing = ref(false); const isReorganizing = ref(false); const isFetchingHistory = ref(false); 
         const benchmarkHistory = reactive({ symbol: '', pct30d: 0, pct90d: 0 });
@@ -366,15 +383,11 @@ createApp({
         
         const password = ref(localStorage.getItem('p_pass') || '');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
-        
         const recForm = reactive({ symbol: '', type: 'New', price: '', count: 1, positionPct: '', analysis: '' });
+        const videoForm = reactive({ date: new Date().toISOString().split('T')[0], symbol: '' }); // 🟢 新增：影音推薦表單
         
         const searchQuery = ref(''); 
-        
-        // 🛡️ 確保預設絕對隱藏
-        const showCashModal = ref(false); 
-        const showAIModal = ref(false); 
-        
+        const showCashModal = ref(false); const showAIModal = ref(false); 
         const aiLoading = ref(false); const selectedSymbol = ref(''); const aiContent = ref('');
         const cashForm = reactive({ date: new Date().toISOString().split('T')[0], amount: '', note: '' });
         const isGeneratingAnalysis = ref(false);
@@ -392,9 +405,7 @@ createApp({
         const getSectorInfo = (sectorName) => { return (dynamicBenchmarks.value[sectorName] && dynamicBenchmarks.value[sectorName].desc) ? { desc: dynamicBenchmarks.value[sectorName].desc } : { desc: '請點擊上方 [✨ AI智能分類] 建立資訊' }; };
 
         onMounted(() => { 
-            showCashModal.value = false;
-            showAIModal.value = false;
-
+            showCashModal.value = false; showAIModal.value = false;
             const cached = localStorage.getItem('app_cache');
             if (cached) {
                 try {
@@ -403,6 +414,7 @@ createApp({
                     marketData.value = p.marketData||{}; cashAdjustments.value = p.cashAdjustments||[]; 
                     recommendations.value = Array.isArray(p.recommendations) ? p.recommendations : []; 
                     navHistoryData.value = Array.isArray(p.navHistory) ? p.navHistory : [];
+                    videoRecs.value = Array.isArray(p.videoRecs) ? p.videoRecs : []; // 🟢 讀取快取
                     if (p.aiSectorMap) aiSectorMap.value = p.aiSectorMap;
                     if (p.dynamicBenchmarks) dynamicBenchmarks.value = p.dynamicBenchmarks; 
                 } catch(e) {}
@@ -424,10 +436,11 @@ createApp({
                 cashAdjustments.value = Array.isArray(data.cashAdjustments) ? data.cashAdjustments : []; 
                 navHistoryData.value = Array.isArray(data.navHistory) ? data.navHistory : []; 
                 recommendations.value = Array.isArray(data.recommendations) ? data.recommendations : [];
+                videoRecs.value = Array.isArray(data.videoRecs) ? data.videoRecs : []; // 🟢 同步後端資料
                 
                 if (data.dynamicBenchmarks) dynamicBenchmarks.value = data.dynamicBenchmarks;
                 if (data.aiSectorMap) aiSectorMap.value = data.aiSectorMap;
-                safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, navHistory: navHistoryData.value, dynamicBenchmarks: dynamicBenchmarks.value, aiSectorMap: aiSectorMap.value}));
+                safeSetLocal('app_cache', JSON.stringify({transactions: transactions.value, marketData: marketData.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, videoRecs: videoRecs.value, navHistory: navHistoryData.value, dynamicBenchmarks: dynamicBenchmarks.value, aiSectorMap: aiSectorMap.value}));
             } catch (e) { if(forceAlert) alert(`同步失敗: ${e.message}`); } finally { isSyncing.value = false; }
         };
 
@@ -435,7 +448,7 @@ createApp({
             if (!checkPassword()) return;
             if (!confirm('確認儲存並記錄當前淨值嗎？')) return;
             try {
-                const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, currentNav: dashboard.value.totalNav };
+                const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, videoRecs: videoRecs.value, currentNav: dashboard.value.totalNav }; // 🟢 包含影音資料
                 const res = await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, { method: 'POST', body: JSON.stringify(payload) });
                 const d = await res.json();
                 if(d.status === 'error') throw new Error(d.message);
@@ -446,7 +459,7 @@ createApp({
         const silentSave = async () => {
             if (!password.value) return;
             try {
-                const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value };
+                const payload = { transactions: transactions.value, cashAdjustments: cashAdjustments.value, recommendations: recommendations.value, videoRecs: videoRecs.value }; // 🟢 包含影音資料
                 await fetch(`${API_URL}?action=save&password=${encodeURIComponent(password.value)}`, { method: 'POST', body: JSON.stringify(payload) });
             } catch(e) {}
         };
@@ -645,9 +658,30 @@ createApp({
         };
         const removeRecommendation = async (id) => { if(confirm('刪除這筆戰略發布？')) { recommendations.value = recommendations.value.filter(r=>r.id!==id); await silentSave(); } };
         
+        // 🟢 新增：新增影音推薦
+        const addVideoRec = async () => {
+            if(!videoForm.symbol) return alert('請輸入美股代號');
+            videoRecs.value.push({ id: Date.now(), date: videoForm.date, symbol: videoForm.symbol.toUpperCase() });
+            videoForm.symbol = '';
+            await silentSave();
+        };
+        // 🟢 新增：移除影音推薦
+        const removeVideoRec = async (id) => {
+            if(confirm('刪除此影音推薦紀錄？')) {
+                videoRecs.value = videoRecs.value.filter(v => v.id !== id);
+                await silentSave();
+            }
+        };
+        
+        // 🟢 新增：計算屬性，只過濾出 7 天內的影音推薦
+        const recentVideoRecs = computed(() => {
+            const sevenDaysAgo = new Date();
+            sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+            return [...videoRecs.value].filter(v => new Date(v.date) >= sevenDaysAgo).sort((a,b) => new Date(b.date) - new Date(a.date));
+        });
+
         const sortedTransactions = computed(() => {
             let historySim = {};
-            
             let txs = [...(transactions.value || [])].sort((a,b) => {
                 let dateA = new Date(a.date).getTime(); let dateB = new Date(b.date).getTime();
                 if (isNaN(dateA)) dateA = 0; if (isNaN(dateB)) dateB = 0;
@@ -657,7 +691,6 @@ createApp({
             let enrichedTxs = txs.map(t => {
                 const sym = String(t.symbol || '').toUpperCase().trim(); 
                 if(!sym) return {...t, realizedPnL: 0};
-                
                 if(!historySim[sym]) historySim[sym] = { shares: 0, totalCost: 0, avg: 0 };
                 
                 let currentTxPnL = 0; 
@@ -703,10 +736,10 @@ createApp({
         });
 
         return { 
-            dashboard, form, cashForm, recForm, transactions, cashAdjustments, recommendations, sortedTransactions, filteredTransactions, searchQuery, monthlyStats,
+            dashboard, form, cashForm, recForm, videoForm, transactions, cashAdjustments, recommendations, videoRecs, recentVideoRecs, sortedTransactions, filteredTransactions, searchQuery, monthlyStats,
             sortedCash: computed(()=>[...cashAdjustments.value].reverse()), 
             sortedRecommendations: computed(()=>[...recommendations.value].sort((a,b)=>new Date(b.date)-new Date(a.date))), 
-            fetchData, saveData, toggleDarkMode, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, 
+            fetchData, saveData, toggleDarkMode, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, addVideoRec, removeVideoRec,
             isGeneratingAnalysis, showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked,
             currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews, dynamicBenchmarks, aiSectorMap, runAutoSectorMap, isReorganizing, getSectorGainers, isFetchingHistory, benchmarkHistory, sectorGainersData,
             showCopilot, chatInput, chatHistory, sendChat, isChatting, marketData
