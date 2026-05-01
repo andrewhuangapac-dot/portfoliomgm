@@ -64,6 +64,9 @@
                 <button @click="toggleDarkMode" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-bold shadow-sm">🌓</button>
                 <button @click="fetchData(true)" class="px-3 py-1.5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow-sm text-xs font-bold">🔄 同步</button>
                 <button @click="saveData" class="px-3 py-1.5 bg-slate-900 dark:bg-black text-white rounded-xl shadow-lg text-xs font-bold">💾 儲存</button>
+                <button @click="exportHoldingsToCSV" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg text-xs font-bold transition">
+    📥 匯出 CSV
+</button>
             </div>
         </header>
 
@@ -267,6 +270,42 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbzj_9p5gBQLl7jNNTB1Rnyl
 
 createApp({
     setup() {
+        // 🟢 匯出持倉為 CSV
+const exportHoldingsToCSV = () => {
+    if (!dashboard.value || !dashboard.value.holdings) return alert('無持倉資料可匯出');
+    
+    // 1. 定義 CSV 標頭
+    let csvContent = "Symbol,Sector,Shares,Average Cost,Current Price,Total Cost,Market Value,Unrealized PnL,PnL %\n";
+    
+    // 2. 填入資料
+    Object.values(dashboard.value.holdings).forEach(h => {
+        if (h.shares > 0) {
+            const marketValue = h.shares * h.currentPrice;
+            const row = [
+                h.symbol,
+                h.sector,
+                h.shares,
+                h.avgCost.toFixed(2),
+                h.currentPrice.toFixed(2),
+                h.totalCost.toFixed(2),
+                marketValue.toFixed(2),
+                h.unrealizedPnL.toFixed(2),
+                h.unrealizedPnLPercent
+            ].join(",");
+            csvContent += row + "\n";
+        }
+    });
+
+    // 3. 觸發下載
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Quant_Portfolio_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); 
         const recommendations = ref([]); const navHistoryData = ref([]); 
         const videoRecs = ref([]); 
