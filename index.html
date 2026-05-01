@@ -64,9 +64,7 @@
                 <button @click="toggleDarkMode" class="px-3 py-1.5 bg-slate-200 dark:bg-slate-800 rounded-xl text-xs font-bold shadow-sm">🌓</button>
                 <button @click="fetchData(true)" class="px-3 py-1.5 bg-white dark:bg-slate-800 border dark:border-slate-700 rounded-xl shadow-sm text-xs font-bold">🔄 同步</button>
                 <button @click="saveData" class="px-3 py-1.5 bg-slate-900 dark:bg-black text-white rounded-xl shadow-lg text-xs font-bold">💾 儲存</button>
-                <button @click="exportHoldingsToCSV" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg text-xs font-bold transition">
-    📥 匯出 CSV
-</button>
+                <button @click="exportHoldingsToCSV" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg text-xs font-bold transition">📥 匯出 CSV</button>
             </div>
         </header>
 
@@ -173,6 +171,7 @@
             </div>
 
             <div class="space-y-6">
+                <!-- 戰略公告發布與歷史 -->
                 <div class="bg-white dark:bg-slate-800 shadow-2xl rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col max-h-[800px]">
                     <div class="p-5 bg-slate-900 dark:bg-black text-white font-black text-xs uppercase flex justify-between items-center z-10 shrink-0"><span>📢 戰略公告發布與歷史</span></div>
                     <div class="p-5 space-y-3 bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 shrink-0">
@@ -193,6 +192,7 @@
                     </div>
                 </div>
 
+                <!-- 影音推薦對外發布窗口 -->
                 <div class="bg-white dark:bg-slate-800 shadow-2xl rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col">
                     <div class="p-5 bg-red-900 dark:bg-red-950 text-white font-black text-xs uppercase flex justify-between items-center z-10 shrink-0"><span>🎥 影音推薦對外發布窗口</span></div>
                     <div class="p-5 bg-slate-50 dark:bg-slate-800 border-b dark:border-slate-700 shrink-0 flex flex-col gap-2">
@@ -226,6 +226,7 @@
         </div>
     </div>
 
+    <!-- Chatbot 區塊 -->
     <div class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
         <div v-if="showCopilot" class="bg-white dark:bg-slate-800 w-[350px] h-[450px] mb-4 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden transition-all">
             <div class="bg-gradient-to-r from-slate-900 to-indigo-900 p-4 flex justify-between items-center text-white"><span class="font-black text-sm flex items-center gap-2">🤖 Qwen Copilot</span><button @click="showCopilot = false" class="hover:text-slate-300 text-xl leading-none">&times;</button></div>
@@ -265,47 +266,10 @@
 <script>
 const { createApp, reactive, computed, onMounted, ref, watch, nextTick } = Vue;
 
-// 🚨 請替換為您最新部署的 GAS 網址
 const API_URL = 'https://script.google.com/macros/s/AKfycbzj_9p5gBQLl7jNNTB1RnylTJsXoT5R-ueZ-UUjEWrG1L2-xN_cNyVEKL9fUNAGx4Am/exec'; 
 
 createApp({
     setup() {
-        // 🟢 匯出持倉為 CSV
-const exportHoldingsToCSV = () => {
-    if (!dashboard.value || !dashboard.value.holdings) return alert('無持倉資料可匯出');
-    
-    // 1. 定義 CSV 標頭
-    let csvContent = "Symbol,Sector,Shares,Average Cost,Current Price,Total Cost,Market Value,Unrealized PnL,PnL %\n";
-    
-    // 2. 填入資料
-    Object.values(dashboard.value.holdings).forEach(h => {
-        if (h.shares > 0) {
-            const marketValue = h.shares * h.currentPrice;
-            const row = [
-                h.symbol,
-                h.sector,
-                h.shares,
-                h.avgCost.toFixed(2),
-                h.currentPrice.toFixed(2),
-                h.totalCost.toFixed(2),
-                marketValue.toFixed(2),
-                h.unrealizedPnL.toFixed(2),
-                h.unrealizedPnLPercent
-            ].join(",");
-            csvContent += row + "\n";
-        }
-    });
-
-    // 3. 觸發下載
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Quant_Portfolio_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
         const transactions = ref([]); const marketData = ref({}); const cashAdjustments = ref([]); 
         const recommendations = ref([]); const navHistoryData = ref([]); 
         const videoRecs = ref([]); 
@@ -317,7 +281,7 @@ const exportHoldingsToCSV = () => {
         const password = ref(localStorage.getItem('p_pass') || '');
         const form = reactive({ date: new Date().toISOString().split('T')[0], type: 'buy', symbol: '', price: '', shares: '' });
         const recForm = reactive({ symbol: '', type: 'New', price: '', count: 1, positionPct: '', analysis: '' });
-        const videoForm = reactive({ date: new Date().toISOString().split('T')[0], symbol: '', url: '' }); // 🟢 URL
+        const videoForm = reactive({ date: new Date().toISOString().split('T')[0], symbol: '', url: '' });
         
         const searchQuery = ref(''); 
         const showCashModal = ref(false); const showAIModal = ref(false); 
@@ -409,6 +373,23 @@ const exportHoldingsToCSV = () => {
             } catch (e) { alert(`AI 重組失敗: ${e.message}`); } finally { isReorganizing.value = false; }
         };
 
+        const exportHoldingsToCSV = () => {
+            if (!dashboard.value || !dashboard.value.holdings) return alert('無持倉資料可匯出');
+            let csvContent = "Symbol,Sector,Shares,Average Cost,Current Price,Total Cost,Market Value,Unrealized PnL,PnL %\n";
+            Object.values(dashboard.value.holdings).forEach(h => {
+                if (h.shares > 0) {
+                    const marketValue = h.shares * h.currentPrice;
+                    const row = [h.symbol, h.sector, h.shares, h.avgCost.toFixed(2), h.currentPrice.toFixed(2), h.totalCost.toFixed(2), marketValue.toFixed(2), h.unrealizedPnL.toFixed(2), h.unrealizedPnLPercent].join(",");
+                    csvContent += row + "\n";
+                }
+            });
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url); link.setAttribute("download", `Quant_Portfolio_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        };
+
         const parsedTransactions = computed(() => {
             return (transactions.value || []).map(t => {
                 let cleanSymbol = String(t.symbol || '').toUpperCase().trim(); 
@@ -445,23 +426,20 @@ const exportHoldingsToCSV = () => {
 
         const sectorList = computed(() => {
             if (!dashboard.value || !dashboard.value.holdings) return [];
-            const sectors = {};
-            Object.values(dashboard.value.holdings).forEach(h => { if (h.shares > 0) sectors[h.sector] = (sectors[h.sector] || 0) + 1; });
+            const sectors = {}; Object.values(dashboard.value.holdings).forEach(h => { if (h.shares > 0) sectors[h.sector] = (sectors[h.sector] || 0) + 1; });
             return Object.keys(sectors).map(name => ({ name, count: sectors[name] })).sort((a, b) => { if(a.name.includes('未分類')) return 1; if(b.name.includes('未分類')) return -1; return b.count - a.count; });
         });
 
         const filteredHoldings = computed(() => {
             if (!dashboard.value || !dashboard.value.holdings) return [];
             const allHoldings = Object.values(dashboard.value.holdings).filter(h => h.shares > 0);
-            if (currentTab.value === '全局') return allHoldings;
-            return allHoldings.filter(h => h.sector === currentTab.value);
+            if (currentTab.value === '全局') return allHoldings; return allHoldings.filter(h => h.sector === currentTab.value);
         });
 
         const currentSectorStats = computed(() => {
             if (currentTab.value === '全局' || !filteredHoldings.value) return null;
             let totalValue = 0; filteredHoldings.value.forEach(h => { const val = h.shares * h.currentPrice; totalValue += val; });
-            const weightPercent = (dashboard.value && dashboard.value.totalNav > 0) ? ((totalValue / dashboard.value.totalNav) * 100).toFixed(1) : 0;
-            return { totalValue, weightPercent };
+            const weightPercent = (dashboard.value && dashboard.value.totalNav > 0) ? ((totalValue / dashboard.value.totalNav) * 100).toFixed(1) : 0; return { totalValue, weightPercent };
         });
 
         watch(currentTab, async (newTab) => {
@@ -572,7 +550,7 @@ const exportHoldingsToCSV = () => {
         return { 
             dashboard, form, cashForm, recForm, videoForm, transactions, cashAdjustments, recommendations, videoRecs, recentVideoRecs, sortedTransactions, filteredTransactions, searchQuery, monthlyStats,
             sortedCash: computed(()=>[...cashAdjustments.value].reverse()), sortedRecommendations: computed(()=>[...recommendations.value].sort((a,b)=>new Date(b.date)-new Date(a.date))), 
-            fetchData, saveData, toggleDarkMode, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, addVideoRec, removeVideoRec,
+            fetchData, saveData, toggleDarkMode, openAIModal, generateAnalysis, addRecommendation, addTransaction, removeTransaction, addCashAdjustment, removeRecommendation, addVideoRec, removeVideoRec, exportHoldingsToCSV,
             isGeneratingAnalysis, showAIModal, showCashModal, aiLoading, aiContent, selectedSymbol, formatCurrency, isSyncing, marked, currentTab, sectorList, filteredHoldings, currentSectorStats, getSectorInfo, sectorNews, isFetchingNews, dynamicBenchmarks, aiSectorMap, runAutoSectorMap, isReorganizing, getSectorGainers, isFetchingHistory, benchmarkHistory, sectorGainersData, showCopilot, chatInput, chatHistory, sendChat, isChatting, marketData
         };
     }
