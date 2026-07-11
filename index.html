@@ -82,7 +82,7 @@
                 <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm"><h3 class="text-[11px] font-black uppercase text-slate-400 mb-2">總資產走勢 (Equity Curve)</h3><div class="relative w-full h-48"><canvas id="navChart"></canvas></div></div>
             </div>
 
-            <!-- 🟢 新增功能：強勢達標追蹤 (大額 + 獲利>20% + 近14天未減碼) -->
+            <!-- 🎯 強勢達標追蹤 -->
             <div v-if="dashboard?.breakoutPositions?.length > 0" class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-emerald-200 dark:border-emerald-900/50 shadow-sm mb-6 relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
                 <h3 class="font-black text-xs uppercase text-emerald-600 dark:text-emerald-400 mb-4 flex items-center gap-2">
@@ -102,7 +102,7 @@
                             <div class="flex justify-between text-xs items-center">
                                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">損益</span>
                                 <span class="font-mono font-black" :class="pos.unrealizedPnL >= 0 ? 'text-up' : 'text-down'">
-                                    {{ pos.unrealizedPnL >= 0 ? '+' : '' }}${{ formatCurrency(pos.unrealizedPnL, 0) }}
+                                    {{ pos.unrealizedPnL >= 0 ? '+' : '' }}${pos.unrealizedPnL > 0 ? formatCurrency(pos.unrealizedPnL, 0) : 0}
                                     <span class="text-[9px] opacity-70 ml-0.5">({{ pos.unrealizedPnLPercent }}%)</span>
                                 </span>
                             </div>
@@ -111,7 +111,7 @@
                 </div>
             </div>
 
-            <!-- 逾期試倉追蹤 (原本的功能) -->
+            <!-- ⏳ 逾期試倉追蹤 -->
             <div v-if="dashboard?.stagnantPositions?.length > 0" class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-orange-200 dark:border-orange-900/50 shadow-sm mb-6 relative overflow-hidden">
                 <div class="absolute top-0 left-0 w-1.5 h-full bg-orange-500"></div>
                 <h3 class="font-black text-xs uppercase text-orange-600 dark:text-orange-400 mb-4 flex items-center gap-2">
@@ -675,5 +675,3 @@ createApp({
 </script>
 </body>
 </html>
-
-
