@@ -134,13 +134,14 @@
             <p class="text-lg lg:text-xl font-black mt-1">{{ money(S.totals.costBasis) }}</p>
           </div>
           <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-            <p class="text-[10px] text-slate-400 font-black uppercase">已實現損益</p>
+            <p class="text-[10px] text-slate-400 font-black uppercase">已實現損益・歷史累計</p>
             <p class="text-lg lg:text-xl font-black mt-1" :class="tone(S.totals.realized)">{{ signedMoney(S.totals.realized) }}</p>
-            <p class="text-[10px] text-slate-400 font-bold">含手續費 {{ money(S.totals.fees) }}</p>
+            <p class="text-[10px] text-slate-400 font-bold">已扣手續費 {{ money(S.totals.fees) }}</p>
           </div>
           <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700">
-            <p class="text-[10px] text-slate-400 font-black uppercase">股息收入</p>
-            <p class="text-lg lg:text-xl font-black mt-1" :class="tone(S.totals.dividends)">{{ signedMoney(S.totals.dividends) }}</p>
+            <p class="text-[10px] text-slate-400 font-black uppercase">已實現損益・近 12 個月</p>
+            <p class="text-lg lg:text-xl font-black mt-1" :class="tone(S.totals.realized12m)">{{ signedMoney(S.totals.realized12m) }}</p>
+            <p class="text-[10px] text-slate-400 font-bold">{{ S.totals.realized12mSince ? '自 ' + S.totals.realized12mSince + ' 起' : '' }}</p>
           </div>
           <div class="bg-white dark:bg-slate-800 p-4 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-700 col-span-2 lg:col-span-1">
             <p class="text-[10px] text-slate-400 font-black uppercase">未實現損益</p>
@@ -222,7 +223,7 @@
           <div class="grid grid-cols-2 md:grid-cols-12 gap-3">
             <input type="date" v-model="txForm.date" class="inp md:col-span-2" aria-label="日期">
             <select v-model="txForm.type" class="inp font-black md:col-span-2" aria-label="類型">
-              <option value="BUY">買入</option><option value="SELL">賣出</option><option value="DIV">股息</option><option value="SPLIT">拆股／合股</option>
+              <option value="BUY">買入</option><option value="SELL">賣出</option><option value="SPLIT">拆股／合股</option>
             </select>
             <input type="text" v-model="txForm.symbol" placeholder="代號" autocapitalize="characters" class="inp uppercase font-black md:col-span-2" aria-label="代號">
             <input v-if="txForm.type !== 'SPLIT'" type="number" step="any" min="0" v-model="txForm.price" :placeholder="txMeta.price" class="inp font-mono md:col-span-2" :aria-label="txMeta.price">
@@ -277,22 +278,23 @@
       <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 overflow-hidden shadow-sm mb-6">
         <div class="p-5 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700"><span class="font-black text-xs uppercase text-slate-500">💼 {{ currentTab === '全局' ? '持倉概要' : currentTab + ' 持倉' }}</span></div>
         <div class="overflow-x-auto no-scrollbar">
-          <table class="w-full text-sm min-w-[820px]">
+          <table class="w-full text-sm min-w-[920px]">
             <thead class="bg-slate-50 dark:bg-slate-900 text-slate-400 text-[10px] uppercase font-bold">
-              <tr><th class="p-4 text-left">標的</th><th class="p-4 text-right">持股</th><th class="p-4 text-right">均價 / 現價</th><th class="p-4 text-right">今日</th><th class="p-4 text-right">近 90 天</th><th class="p-4 text-right">市值 / 權重</th><th class="p-4 text-right">未實現損益</th></tr>
+              <tr><th class="p-4 text-left">標的</th><th class="p-4 text-right">持股</th><th class="p-4 text-right">最近買入</th><th class="p-4 text-right">均價 / 現價</th><th class="p-4 text-right">今日</th><th class="p-4 text-right">近 90 天</th><th class="p-4 text-right">市值 / 權重</th><th class="p-4 text-right">未實現損益</th></tr>
             </thead>
             <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
               <tr v-for="h in filteredHoldings" :key="h.symbol" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
                 <td class="p-4"><span class="font-black text-lg">{{ h.symbol }}</span>
                   <div class="mt-0.5 flex gap-1"><span class="text-[9px] bg-slate-100 dark:bg-slate-900 text-slate-500 px-1.5 py-0.5 rounded">{{ h.sector }}</span><span v-if="h.priceStale" class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded" title="報價暫缺，以成本價計算">⚠ 報價缺失</span></div></td>
                 <td class="p-4 text-right font-mono font-bold">{{ qty(h.shares) }}</td>
+                <td class="p-4 text-right font-mono text-slate-500">{{ h.lastBuyDate || '—' }}<span v-if="h.daysSinceLastBuy !== null" class="block text-[10px] text-slate-400">{{ h.daysSinceLastBuy === 0 ? '今天' : h.daysSinceLastBuy + ' 天前' }}</span></td>
                 <td class="p-4 text-right font-mono text-slate-500">{{ money(h.avgCost, 2) }}<span class="block text-[12px] font-bold text-blue-500">{{ h.priceStale ? '—' : money(h.price, 2) }}</span></td>
                 <td class="p-4 text-right font-black font-mono" :class="tone(h.changePct)">{{ pct(h.changePct) }}</td>
                 <td class="p-4 text-right font-black font-mono" :class="tone(h.change90d)">{{ pct(h.change90d) }}</td>
                 <td class="p-4 text-right font-mono">{{ money(h.marketValue) }}<span class="block text-[10px] text-slate-400">{{ h.weightPct.toFixed(1) }}%</span></td>
                 <td class="p-4 text-right font-black font-mono" :class="tone(h.unrealized)">{{ signedMoney(h.unrealized) }}<span class="block text-[10px] opacity-70">{{ pct(h.unrealizedPct) }}</span></td>
               </tr>
-              <tr v-if="!filteredHoldings.length"><td colspan="7" class="p-8 text-center text-slate-400 text-xs font-bold tracking-widest">目前無持倉</td></tr>
+              <tr v-if="!filteredHoldings.length"><td colspan="8" class="p-8 text-center text-slate-400 text-xs font-bold tracking-widest">目前無持倉</td></tr>
             </tbody>
           </table>
         </div>
@@ -309,7 +311,7 @@
             <div class="overflow-auto no-scrollbar max-h-[600px]">
               <table class="w-full text-sm min-w-[640px]">
                 <thead class="bg-slate-50 dark:bg-slate-900 text-[10px] text-slate-400 uppercase font-bold sticky top-0 z-10">
-                  <tr><th class="p-3 text-left">日期</th><th class="p-3 text-left">標的</th><th class="p-3 text-center">類型</th><th class="p-3 text-right">單價</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">費用</th><th class="p-3 text-right">實現損益／股息</th><th class="p-3"></th></tr>
+                  <tr><th class="p-3 text-left">日期</th><th class="p-3 text-left">標的</th><th class="p-3 text-center">類型</th><th class="p-3 text-right">單價</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">費用</th><th class="p-3 text-right">實現損益</th><th class="p-3"></th></tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
                   <tr v-for="t in filteredTransactions" :key="t.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50" :class="t.warning ? 'bg-red-50/60 dark:bg-red-900/10' : ''">
@@ -395,12 +397,11 @@
 
           <!-- 📈 每月 -->
           <div class="bg-white dark:bg-slate-800 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm overflow-hidden">
-            <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月已實現損益（含股息）</div>
+            <div class="p-5 bg-slate-50 dark:bg-slate-900 font-black text-xs uppercase text-slate-500">📈 每月已實現損益</div>
             <div class="max-h-56 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-700 no-scrollbar">
               <div v-for="m in S.monthly" :key="m.month" class="px-5 py-3 flex justify-between items-center text-sm">
                 <span class="font-bold text-slate-500">{{ m.month }}</span>
-                <span class="text-right"><span class="font-black font-mono" :class="tone(m.realized + m.dividends)">{{ signedMoney(m.realized + m.dividends) }}</span>
-                  <span v-if="m.dividends" class="block text-[10px] text-slate-400 font-mono">股息 {{ money(m.dividends) }}</span></span>
+                <span class="font-black font-mono" :class="tone(m.realized)">{{ signedMoney(m.realized) }}</span>
               </div>
               <div v-if="!S.monthly.length" class="p-5 text-xs text-slate-400 text-center">尚無已實現損益</div>
             </div>
@@ -461,7 +462,7 @@
 (function () {
   'use strict';
   // ⚙️ 部署新版 Apps Script 後，把網址貼在這裡
-  const API_URL = 'https://script.google.com/macros/s/AKfycbzJZBJkf4zANJkC1W7ROHZjXxjj7_gEHZQzBcsSH4k4P3bXt1yv5TIATUrwygi_vu71/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbzZ2m8n6DtENhoBeUKdkZbRpV3np-fa-0w93DxhRwiVCT6bD0mlBLWkfZHqm8ibwjY2/exec';
 
   const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
   const LS = { token: 'qt6_token', exp: 'qt6_token_exp', cache: 'qt6_cache', theme: 'theme' };
@@ -487,10 +488,10 @@
     totals: {}, positions: [], sectors: [], breakout: [], stagnant: [], benchmarks: {}, transactions: [], cash: [],
     monthly: [], navSeries: [], recommendations: [], videos: [], warnings: [], missingPrices: []
   };
-  const TYPE_LABEL = { BUY: '買入', SELL: '賣出', DIV: '股息', SPLIT: '拆股' };
+  const TYPE_LABEL = { BUY: '買入', SELL: '賣出', SPLIT: '拆股' };
   const TYPE_STYLE = {
     BUY: 'text-blue-600 bg-blue-50 dark:bg-blue-900/40 dark:text-blue-300', SELL: 'text-amber-600 bg-amber-50 dark:bg-amber-900/40 dark:text-amber-300',
-    DIV: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-900/40 dark:text-emerald-300', SPLIT: 'text-purple-600 bg-purple-50 dark:bg-purple-900/40 dark:text-purple-300'
+    SPLIT: 'text-purple-600 bg-purple-50 dark:bg-purple-900/40 dark:text-purple-300'
   };
   const REC_LABEL = { New: '建倉', Add: '加碼', Reduce: '減碼', Clear: '清倉' };
   const STATUS = {
@@ -629,7 +630,7 @@
       const txForm = reactive({ date: localDate(), type: 'BUY', symbol: '', price: '', shares: '', fee: '', note: '' });
       const txMeta = computed(() => ({
         BUY: { price: '成交價', shares: '股數' }, SELL: { price: '成交價', shares: '股數' },
-        DIV: { price: '每股股息', shares: '持有股數' }, SPLIT: { price: '', shares: '比例（一拆十填 10，十合一填 0.1）' }
+        SPLIT: { price: '', shares: '比例（一拆十填 10，十合一填 0.1）' }
       })[txForm.type]);
       const txPreview = computed(() => {
         const sym = txForm.symbol.trim().toUpperCase();
@@ -647,7 +648,6 @@
           if (sh > p.shares + 1e-6) return '⚠ 超過持有的 ' + qty(p.shares) + ' 股，後端會拒絕';
           return '預估實現損益 ' + signedMoney(price * sh - fee - p.avgCost * sh, 2);
         }
-        if (txForm.type === 'DIV') return '股息入帳 ' + money(price * sh - fee, 2);
         return '';
       });
       async function submitTx() {
@@ -715,9 +715,9 @@
         await mutate('ai_sector_map', {}, d => d.message);
       }
       function exportCSV() {
-        const head = ['Symbol', 'Sector', 'Shares', 'Avg Cost', 'Price', 'Price Missing', 'Cost Basis', 'Market Value', 'Unrealized PnL', 'PnL %', 'Weight %'];
+        const head = ['Symbol', 'Sector', 'Shares', 'Avg Cost', 'Price', 'Price Missing', 'Last Buy Date', 'Cost Basis', 'Market Value', 'Unrealized PnL', 'PnL %', 'Weight %'];
         const cell = v => typeof v === 'number' ? String(v) : '"' + (/^[=+\-@\t\r]/.test(String(v)) ? "'" : '') + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-        const rows = S.value.positions.map(p => [p.symbol, p.sector, p.shares, p.avgCost, p.price, p.priceStale ? 'Y' : '', p.cost, p.marketValue, p.unrealized, p.unrealizedPct, p.weightPct]);
+        const rows = S.value.positions.map(p => [p.symbol, p.sector, p.shares, p.avgCost, p.price, p.priceStale ? 'Y' : '', p.lastBuyDate || '', p.cost, p.marketValue, p.unrealized, p.unrealizedPct, p.weightPct]);
         const csv = '﻿' + [head].concat(rows).map(r => r.map(cell).join(',')).join('\r\n');
         const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
         const a = document.createElement('a'); a.href = url; a.download = 'Quant_Portfolio_' + localDate() + '.csv';
