@@ -72,7 +72,8 @@
     <nav class="sidebar bg-white dark:bg-slate-900 p-4 no-scrollbar z-10">
       <div class="mb-8 hidden lg:block">
         <h1 class="text-xl font-black tracking-tight leading-none">Quant<br><span class="text-indigo-600 dark:text-indigo-400">Terminal</span></h1>
-        <span class="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-1.5 py-0.5 rounded font-black tracking-widest uppercase mt-1 inline-block">v{{ S.version || '6' }}</span>
+        <span class="text-[9px] bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-1.5 py-0.5 rounded font-black tracking-widest uppercase mt-1 inline-block">頁面 v{{ APP_VERSION }}</span>
+        <span v-if="S.version" class="block text-[9px] text-slate-400 font-bold mt-1">後端 v{{ S.version }}</span>
       </div>
       <div class="text-[10px] font-black uppercase text-slate-400 mb-2 px-3 tracking-widest hidden lg:block">投資組合視角</div>
       <div @click="currentTab = '全局'" class="sidebar-item cursor-pointer px-3 py-2.5 rounded-lg mb-1 lg:mb-4 flex items-center gap-2" :class="{ active: currentTab === '全局' }"><span>🌍</span><span class="text-sm">全局總覽</span></div>
@@ -106,12 +107,21 @@
       </header>
 
       <!-- 狀態提示 -->
+      <div v-if="versionMismatch" class="mb-4 p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-300 dark:border-red-800 text-xs font-bold text-red-700 dark:text-red-300">
+        ⚠️ 版本不一致：管理頁為 v{{ APP_VERSION }}，後端為 v{{ S.version }}。部分欄位可能顯示錯誤，請把 GitHub 上的 admin.html 更新為與後端相同版本，並強制重新整理（Ctrl/Cmd + Shift + R）。
+      </div>
       <div v-if="sync.status === 'offline'" class="mb-4 p-3 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-800 dark:text-amber-300 flex flex-wrap items-center gap-2">
         ⚠️ 無法連線後端（{{ sync.message }}）。目前顯示 {{ dateTimeStr(cacheSavedAt) }} 的快取資料，所有寫入功能已停用。
         <button @click="refresh(true)" class="underline">重試</button>
       </div>
       <div v-if="S.missingPrices.length" class="mb-4 p-3 rounded-2xl bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-xs font-bold text-amber-800 dark:text-amber-300">
-        ⚠️ {{ S.missingPrices.join('、') }} 報價暫缺，暫以成本價計算（新代號的報價公式約需數秒，稍後同步即可）。
+        ⚠️ {{ S.missingPrices.join('、') }} 沒有報價（也沒有 7 天內的有效報價），暫以成本價計算。新代號的報價公式約需數秒，稍後同步即可。
+      </div>
+      <div v-if="S.stalePrices.length" class="mb-4 p-3 rounded-2xl bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 text-xs font-bold text-sky-800 dark:text-sky-300">
+        ⏱ 即時報價暫時失效，沿用最後有效報價：{{ S.stalePrices.map(x => x.symbol + '（' + dateTimeStr(x.asOf) + '）').join('、') }}
+      </div>
+      <div v-if="S.concentration.length" class="mb-4 p-3 rounded-2xl bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 text-xs font-bold text-rose-700 dark:text-rose-300">
+        🎯 集中度警示：<span v-for="(a, i) in S.concentration" :key="a.kind + a.name">{{ i ? '；' : '' }}{{ a.kind === 'sector' ? '板塊 ' : '' }}{{ a.name }} 佔 NAV {{ a.weightPct.toFixed(1) }}%（上限 {{ a.limitPct }}%）</span>
       </div>
       <details v-if="S.warnings.length" class="mb-4 p-3 rounded-2xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-xs font-bold text-red-700 dark:text-red-300">
         <summary>⚠️ 帳務異常 {{ S.warnings.length }} 則（點擊展開；需在試算表或交易紀錄中修正）</summary>
@@ -154,6 +164,26 @@
           </div>
         </div>
 
+        <!-- 📈 績效摘要 -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm mb-6">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <h3 class="text-[11px] font-black uppercase text-slate-400">📈 績效摘要（時間加權報酬，對比 {{ S.performance.benchmark || 'SPY' }}）</h3>
+            <span v-if="S.performance.asOf" class="text-[10px] text-slate-400 font-bold">截至 {{ S.performance.asOf }} 快照</span>
+          </div>
+          <div v-if="S.performance.periods.length" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div v-for="p in S.performance.periods" :key="p.key" class="rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-100 dark:border-slate-700 p-3" :class="p.key === 'ALL' ? 'col-span-2 sm:col-span-1' : ''">
+              <p class="text-[10px] font-black text-slate-400">{{ p.label }}</p>
+              <p class="text-xl font-black font-mono mt-0.5" :class="tone(p.portfolio)" :title="p.approx ? '起點快照距離理論起始日超過 7 天，為近似值' : ''">{{ p.portfolio !== null && p.approx ? '≈' : '' }}{{ pct(p.portfolio) }}</p>
+              <p class="text-[10px] font-bold text-slate-500 font-mono">{{ S.performance.benchmark }} {{ pct(p.benchmark) }}</p>
+              <p class="text-[10px] font-black font-mono" :class="tone(p.excess)">超額 {{ pct(p.excess) }}</p>
+              <p class="text-[9px] text-slate-400 mt-1">{{ p.from ? '自 ' + p.from : '資料不足' }}</p>
+            </div>
+          </div>
+          <p v-else class="text-xs text-slate-400 font-bold">至少需要兩筆淨值快照才能計算績效。</p>
+          <p v-if="perfMissingBench" class="text-[10px] text-slate-400 font-bold mt-3 flex flex-wrap items-center gap-2">部分歷史快照沒有 {{ S.performance.benchmark || 'SPY' }} 價格。
+            <button @click="backfillBench" :disabled="!canWrite" class="btn bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 py-1">{{ busy === 'benchmark_backfill' ? '⏳ 回補中…' : '立即回補' }}</button></p>
+        </div>
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm">
             <h3 class="text-[11px] font-black uppercase text-slate-400 mb-3">資產配置（依板塊市值）</h3>
@@ -170,7 +200,7 @@
           </div>
           <div class="bg-white dark:bg-slate-800 p-5 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm">
             <div class="flex justify-between items-center mb-2">
-              <h3 class="text-[11px] font-black uppercase text-slate-400">{{ navMode === 'unit' ? '績效指數（單位淨值，已扣除出入金）' : '總資產走勢 (NAV)' }}</h3>
+              <h3 class="text-[11px] font-black uppercase text-slate-400">{{ navMode === 'unit' ? '績效指數 vs ' + (S.performance.benchmark || 'SPY') + '（已扣除出入金）' : '總資產走勢 (NAV)' }}</h3>
               <div class="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-0.5 text-[10px] font-black">
                 <button @click="navMode = 'unit'" class="px-2 py-1 rounded-md" :class="navMode === 'unit' ? 'bg-white dark:bg-slate-700 shadow' : 'text-slate-400'">績效</button>
                 <button @click="navMode = 'nav'" class="px-2 py-1 rounded-md" :class="navMode === 'nav' ? 'bg-white dark:bg-slate-700 shadow' : 'text-slate-400'">總資產</button>
@@ -185,7 +215,7 @@
         <div v-if="S.breakout.length" class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-emerald-200 dark:border-emerald-900/50 shadow-sm mb-6 relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
           <h3 class="font-black text-xs uppercase text-emerald-600 dark:text-emerald-400 mb-4 flex flex-wrap items-center gap-2">🎯 強勢達標追蹤
-            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">成本 &gt; {{ money(S.rules.breakout.minCost) }}・獲利 ≥ {{ S.rules.breakout.minPnlPct }}%・近 {{ S.rules.breakout.noSellDays }} 天未減碼</span>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">成本 ≥ {{ S.rules.breakout.minCostPct }}% NAV・獲利 ≥ {{ S.rules.breakout.minPnlPct }}%・近 {{ S.rules.breakout.noSellDays }} 天未減碼</span>
           </h3>
           <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
             <div v-for="p in S.breakout" :key="p.symbol" class="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
@@ -193,7 +223,7 @@
                 <span class="font-black text-lg leading-none">{{ p.symbol }}</span>
                 <span class="text-[10px] font-black bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 px-1.5 py-0.5 rounded">達標</span>
               </div>
-              <div class="flex justify-between text-xs"><span class="text-[10px] font-bold text-slate-400">成本</span><span class="font-mono font-bold">{{ money(p.cost) }}</span></div>
+              <div class="flex justify-between text-xs"><span class="text-[10px] font-bold text-slate-400">成本</span><span class="font-mono font-bold">{{ money(p.cost) }} <span class="text-[9px] text-slate-400">({{ p.costWeightPct.toFixed(1) }}%)</span></span></div>
               <div class="flex justify-between text-xs mt-1"><span class="text-[10px] font-bold text-slate-400">損益</span><span class="font-mono font-black" :class="tone(p.unrealized)">{{ signedMoney(p.unrealized) }} <span class="text-[9px] opacity-70">({{ pct(p.unrealizedPct) }})</span></span></div>
             </div>
           </div>
@@ -203,7 +233,7 @@
         <div v-if="S.stagnant.length" class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-orange-200 dark:border-orange-900/50 shadow-sm mb-6 relative overflow-hidden">
           <div class="absolute top-0 left-0 w-1.5 h-full bg-orange-500"></div>
           <h3 class="font-black text-xs uppercase text-orange-600 dark:text-orange-400 mb-4 flex flex-wrap items-center gap-2">⏳ 逾期試倉追蹤
-            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">成本 &lt; {{ money(S.rules.stagnant.maxCost) }}・建倉 &gt; {{ S.rules.stagnant.minDays }} 天</span>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold bg-slate-100 dark:bg-slate-900 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">成本 &lt; {{ S.rules.stagnant.maxCostPct }}% NAV・建倉 &gt; {{ S.rules.stagnant.minDays }} 天</span>
           </h3>
           <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
             <div v-for="p in S.stagnant" :key="p.symbol" class="bg-slate-50 dark:bg-slate-900/50 rounded-xl p-4 border border-slate-100 dark:border-slate-800">
@@ -211,26 +241,29 @@
                 <span class="font-black text-lg leading-none">{{ p.symbol }}</span>
                 <span class="text-[10px] font-black bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 px-1.5 py-0.5 rounded">{{ p.daysHeld }} 天</span>
               </div>
-              <div class="flex justify-between text-xs"><span class="text-[10px] font-bold text-slate-400">成本</span><span class="font-mono font-bold">{{ money(p.cost) }}</span></div>
+              <div class="flex justify-between text-xs"><span class="text-[10px] font-bold text-slate-400">成本</span><span class="font-mono font-bold">{{ money(p.cost) }} <span class="text-[9px] text-slate-400">({{ p.costWeightPct.toFixed(1) }}%)</span></span></div>
               <div class="flex justify-between text-xs mt-1"><span class="text-[10px] font-bold text-slate-400">損益</span><span class="font-mono font-black" :class="tone(p.unrealized)">{{ signedMoney(p.unrealized) }} <span class="text-[9px] opacity-70">({{ pct(p.unrealizedPct) }})</span></span></div>
             </div>
           </div>
         </div>
 
         <!-- 🚀 交易登錄 -->
-        <form @submit.prevent="submitTx" class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-700 shadow-sm mb-6">
-          <h3 class="font-black text-xs uppercase text-slate-500 mb-4">🚀 登錄交易 <span class="normal-case font-bold text-slate-400">（直接寫入後端，無需另外儲存）</span></h3>
+        <form ref="txFormEl" @submit.prevent="submitTx" class="bg-white dark:bg-slate-800 p-6 rounded-[2rem] border shadow-sm mb-6 transition" :class="editingId ? 'border-blue-400 ring-4 ring-blue-100 dark:ring-blue-900/40' : 'border-slate-100 dark:border-slate-700'">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-4">
+            <h3 class="font-black text-xs uppercase" :class="editingId ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500'">{{ editingId ? '✏️ 編輯交易' : '🚀 登錄交易' }} <span class="normal-case font-bold text-slate-400">（直接寫入後端，無需另外儲存）</span></h3>
+            <button v-if="editingId" type="button" @click="cancelEdit" class="btn bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">取消編輯</button>
+          </div>
           <div class="grid grid-cols-2 md:grid-cols-12 gap-3">
             <input type="date" v-model="txForm.date" class="inp md:col-span-2" aria-label="日期">
             <select v-model="txForm.type" class="inp font-black md:col-span-2" aria-label="類型">
-              <option value="BUY">買入</option><option value="SELL">賣出</option><option value="SPLIT">拆股／合股</option>
+              <option value="" disabled>選擇類型</option><option value="BUY">買入</option><option value="SELL">賣出</option><option value="SPLIT">拆股／合股</option>
             </select>
             <input type="text" v-model="txForm.symbol" placeholder="代號" autocapitalize="characters" class="inp uppercase font-black md:col-span-2" aria-label="代號">
             <input v-if="txForm.type !== 'SPLIT'" type="number" step="any" min="0" v-model="txForm.price" :placeholder="txMeta.price" class="inp font-mono md:col-span-2" :aria-label="txMeta.price">
             <input type="number" step="any" min="0" v-model="txForm.shares" :placeholder="txMeta.shares" class="inp font-mono" :class="txForm.type === 'SPLIT' ? 'md:col-span-4' : 'md:col-span-2'" :aria-label="txMeta.shares">
             <input v-if="txForm.type !== 'SPLIT'" type="number" step="any" min="0" v-model="txForm.fee" placeholder="手續費（選填）" class="inp font-mono md:col-span-2" aria-label="手續費">
             <input type="text" v-model="txForm.note" maxlength="200" placeholder="備註（選填）" class="inp col-span-2 md:col-span-8">
-            <button type="submit" :disabled="!canWrite" class="col-span-2 md:col-span-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-2xl font-black shadow-lg disabled:opacity-40">{{ busy === 'tx_add' ? '寫入中…' : '確認寫入' }}</button>
+            <button type="submit" :disabled="!canWrite" class="col-span-2 md:col-span-4 bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-2xl font-black shadow-lg disabled:opacity-40">{{ busy === 'tx_add' || busy === 'tx_update' ? '寫入中…' : (editingId ? '儲存修改' : '確認寫入') }}</button>
           </div>
           <p v-if="txPreview" class="text-[11px] font-bold mt-3" :class="txPreview.startsWith('⚠') ? 'text-amber-600' : 'text-slate-500'">{{ txPreview }}</p>
         </form>
@@ -285,13 +318,13 @@
             <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
               <tr v-for="h in filteredHoldings" :key="h.symbol" class="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition">
                 <td class="p-4"><span class="font-black text-lg">{{ h.symbol }}</span>
-                  <div class="mt-0.5 flex gap-1"><span class="text-[9px] bg-slate-100 dark:bg-slate-900 text-slate-500 px-1.5 py-0.5 rounded">{{ h.sector }}</span><span v-if="h.priceStale" class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded" title="報價暫缺，以成本價計算">⚠ 報價缺失</span></div></td>
+                  <div class="mt-0.5 flex gap-1"><span class="text-[9px] bg-slate-100 dark:bg-slate-900 text-slate-500 px-1.5 py-0.5 rounded">{{ h.sector }}</span><span v-if="h.priceSource === 'last'" class="text-[9px] bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 px-1.5 py-0.5 rounded" :title="'沿用最後有效報價：' + dateTimeStr(h.priceAsOf)">⏱ 延用報價</span><span v-if="h.priceSource === 'cost'" class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded" title="無報價，以成本價計算">⚠ 報價缺失</span></div></td>
                 <td class="p-4 text-right font-mono font-bold">{{ qty(h.shares) }}</td>
                 <td class="p-4 text-right font-mono text-slate-500">{{ h.lastBuyDate || '—' }}<span v-if="h.daysSinceLastBuy !== null" class="block text-[10px] text-slate-400">{{ h.daysSinceLastBuy === 0 ? '今天' : h.daysSinceLastBuy + ' 天前' }}</span></td>
-                <td class="p-4 text-right font-mono text-slate-500">{{ money(h.avgCost, 2) }}<span class="block text-[12px] font-bold text-blue-500">{{ h.priceStale ? '—' : money(h.price, 2) }}</span></td>
+                <td class="p-4 text-right font-mono text-slate-500">{{ money(h.avgCost, 2) }}<span class="block text-[12px] font-bold text-blue-500">{{ h.priceSource === 'cost' ? '—' : money(h.price, 2) }}</span></td>
                 <td class="p-4 text-right font-black font-mono" :class="tone(h.changePct)">{{ pct(h.changePct) }}</td>
                 <td class="p-4 text-right font-black font-mono" :class="tone(h.change90d)">{{ pct(h.change90d) }}</td>
-                <td class="p-4 text-right font-mono">{{ money(h.marketValue) }}<span class="block text-[10px] text-slate-400">{{ h.weightPct.toFixed(1) }}%</span></td>
+                <td class="p-4 text-right font-mono">{{ money(h.marketValue) }}<span class="block text-[10px]" :class="h.weightPct > S.concentrationRules.maxPositionPct ? 'text-rose-500 font-black' : 'text-slate-400'">{{ h.weightPct.toFixed(1) }}%</span></td>
                 <td class="p-4 text-right font-black font-mono" :class="tone(h.unrealized)">{{ signedMoney(h.unrealized) }}<span class="block text-[10px] opacity-70">{{ pct(h.unrealizedPct) }}</span></td>
               </tr>
               <tr v-if="!filteredHoldings.length"><td colspan="8" class="p-8 text-center text-slate-400 text-xs font-bold tracking-widest">目前無持倉</td></tr>
@@ -308,13 +341,13 @@
               <span class="font-black text-xs uppercase text-slate-500">📜 交易紀錄 <span class="text-slate-400 font-bold">({{ S.transactions.length }})</span></span>
               <input v-model="searchQuery" type="search" placeholder="🔍 代號" class="text-xs p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 outline-none w-28 text-center font-bold uppercase">
             </div>
-            <div class="overflow-auto no-scrollbar max-h-[600px]">
+            <div class="hidden md:block overflow-auto no-scrollbar max-h-[600px]">
               <table class="w-full text-sm min-w-[640px]">
                 <thead class="bg-slate-50 dark:bg-slate-900 text-[10px] text-slate-400 uppercase font-bold sticky top-0 z-10">
                   <tr><th class="p-3 text-left">日期</th><th class="p-3 text-left">標的</th><th class="p-3 text-center">類型</th><th class="p-3 text-right">單價</th><th class="p-3 text-right">股數</th><th class="p-3 text-right">費用</th><th class="p-3 text-right">實現損益</th><th class="p-3"></th></tr>
                 </thead>
                 <tbody class="divide-y divide-slate-50 dark:divide-slate-700">
-                  <tr v-for="t in filteredTransactions" :key="t.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50" :class="t.warning ? 'bg-red-50/60 dark:bg-red-900/10' : ''">
+                  <tr v-for="t in filteredTransactions" :key="t.id" class="hover:bg-slate-50 dark:hover:bg-slate-700/50" :class="[t.warning ? 'bg-red-50/60 dark:bg-red-900/10' : '', editingId === t.id ? 'bg-blue-50 dark:bg-blue-900/20' : '']">
                     <td class="p-3 text-[11px] text-slate-400 font-mono">{{ t.date }}</td>
                     <td class="p-3 font-black">{{ t.symbol }}<span v-if="t.note" class="block text-[10px] text-slate-400 font-normal truncate max-w-[160px]" :title="t.note">{{ t.note }}</span></td>
                     <td class="p-3 text-center"><span class="px-2 py-0.5 rounded-lg text-[10px] font-black" :class="TYPE_STYLE[t.type] || 'bg-slate-100 text-slate-500'">{{ TYPE_LABEL[t.type] || t.type }}</span></td>
@@ -323,11 +356,41 @@
                     <td class="p-3 text-right font-mono text-slate-400">{{ t.fee ? money(t.fee, 2) : '—' }}</td>
                     <td class="p-3 text-right font-black font-mono" :class="t.pnl === null ? 'text-slate-300 dark:text-slate-600' : tone(t.pnl)">{{ t.pnl === null ? '—' : signedMoney(t.pnl) }}
                       <span v-if="t.warning" class="block text-[10px] text-red-500 font-bold" :title="t.warning">⚠ {{ t.warning }}</span></td>
-                    <td class="p-3 text-center"><button @click="deleteTx(t)" :disabled="!canWrite" class="text-slate-300 dark:text-slate-600 hover:text-red-500 font-black disabled:opacity-30" aria-label="刪除">×</button></td>
+                    <td class="p-3 text-center whitespace-nowrap">
+                      <button @click="startEdit(t)" :disabled="!canWrite" class="text-slate-300 dark:text-slate-600 hover:text-blue-500 font-black disabled:opacity-30 mr-2" aria-label="編輯">✎</button>
+                      <button @click="deleteTx(t)" :disabled="!canWrite" class="text-slate-300 dark:text-slate-600 hover:text-red-500 font-black disabled:opacity-30" aria-label="刪除">×</button>
+                    </td>
                   </tr>
                   <tr v-if="!filteredTransactions.length"><td colspan="8" class="p-8 text-center text-slate-400 text-xs font-bold">無符合的交易</td></tr>
                 </tbody>
               </table>
+            </div>
+            <!-- 手機版：卡片式交易紀錄 -->
+            <div class="md:hidden divide-y divide-slate-100 dark:divide-slate-700" data-testid="tx-cards">
+              <div v-for="t in filteredTransactions.slice(0, mobileTxLimit)" :key="'m' + t.id" class="p-4" :class="[t.warning ? 'bg-red-50/60 dark:bg-red-900/10' : '', editingId === t.id ? 'bg-blue-50 dark:bg-blue-900/20' : '']">
+                <div class="flex justify-between items-center gap-2">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span class="font-black text-base">{{ t.symbol }}</span>
+                    <span class="px-2 py-0.5 rounded-lg text-[10px] font-black" :class="TYPE_STYLE[t.type] || 'bg-slate-100 text-slate-500'">{{ TYPE_LABEL[t.type] || t.type }}</span>
+                  </div>
+                  <span class="text-[11px] text-slate-400 font-mono shrink-0">{{ t.date }}</span>
+                </div>
+                <div class="flex justify-between items-end gap-2 mt-2">
+                  <span class="text-xs font-mono text-slate-500">
+                    <template v-if="t.type === 'SPLIT'">比例 ×{{ qty(t.shares) }}</template>
+                    <template v-else>{{ qty(t.shares) }} 股 @ {{ money(t.price, 2) }}<span v-if="t.fee" class="text-slate-400">・費用 {{ money(t.fee, 2) }}</span></template>
+                  </span>
+                  <span v-if="t.pnl !== null" class="font-black font-mono text-sm shrink-0" :class="tone(t.pnl)">{{ signedMoney(t.pnl) }}</span>
+                </div>
+                <p v-if="t.note" class="text-[11px] text-slate-400 mt-1 break-words">{{ t.note }}</p>
+                <p v-if="t.warning" class="text-[11px] text-red-500 font-bold mt-1">⚠ {{ t.warning }}</p>
+                <div class="flex justify-end gap-5 mt-2">
+                  <button @click="startEdit(t)" :disabled="!canWrite" class="text-[11px] font-black text-blue-500 disabled:opacity-30">編輯</button>
+                  <button @click="deleteTx(t)" :disabled="!canWrite" class="text-[11px] font-black text-slate-400 hover:text-red-500 disabled:opacity-30">刪除</button>
+                </div>
+              </div>
+              <div v-if="!filteredTransactions.length" class="p-8 text-center text-slate-400 text-xs font-bold">無符合的交易</div>
+              <button v-if="filteredTransactions.length > mobileTxLimit" @click="mobileTxLimit += 30" class="w-full p-4 text-xs font-black text-blue-500">顯示更多（還有 {{ filteredTransactions.length - mobileTxLimit }} 筆）</button>
             </div>
           </div>
         </div>
@@ -463,6 +526,7 @@
   'use strict';
   // ⚙️ 部署新版 Apps Script 後，把網址貼在這裡
   const API_URL = 'https://script.google.com/macros/s/AKfycbzRNopoUUFMa_qTGXH3xwnd9zxWTwrqEz5Pvzua2O2d794BmbhbqBBQVHSW-rX-OGA/exec';
+  const APP_VERSION = '6.2.1';   // 需與 Code.gs 的 CFG.VERSION 主、次版號一致
 
   const { createApp, ref, reactive, computed, watch, onMounted, nextTick } = Vue;
   const LS = { token: 'qt6_token', exp: 'qt6_token_exp', cache: 'qt6_cache', theme: 'theme' };
@@ -486,7 +550,8 @@
     version: '', aiModel: '', today: '', rules: { breakout: {}, stagnant: {} },
     publicRules: { maxVotes: 5, buyMinVotes: 3, sellMinVotes: 2, windowDays: 7 },
     totals: {}, positions: [], sectors: [], breakout: [], stagnant: [], benchmarks: {}, transactions: [], cash: [],
-    monthly: [], navSeries: [], recommendations: [], videos: [], warnings: [], missingPrices: []
+    monthly: [], navSeries: [], recommendations: [], videos: [], warnings: [], missingPrices: [], stalePrices: [],
+    concentration: [], concentrationRules: {}, performance: { periods: [] }, benchmark: {}
   };
   const TYPE_LABEL = { BUY: '買入', SELL: '賣出', SPLIT: '拆股' };
   const TYPE_STYLE = {
@@ -523,6 +588,8 @@
       const cacheSavedAt = ref(null);
       const busy = ref('');
       const canWrite = computed(() => sync.status === 'ok' && !busy.value);
+      // 只比對主、次版號（6.2.x）；後端的修補版更新不需要換管理頁
+      const versionMismatch = computed(() => !!S.value.version && S.value.version.split('.').slice(0, 2).join('.') !== APP_VERSION.split('.').slice(0, 2).join('.'));
       const toasts = ref([]);
       function toast(text, kind, ms) {
         const id = Date.now() + Math.random();
@@ -621,6 +688,8 @@
       const currentSector = computed(() => S.value.sectors.find(s => s.name === currentTab.value) || null);
       const currentBench = computed(() => S.value.benchmarks[currentTab.value] || null);
       const searchQuery = ref('');
+      const mobileTxLimit = ref(30);
+      watch(searchQuery, () => { mobileTxLimit.value = 30; });
       const filteredTransactions = computed(() => {
         const q = searchQuery.value.trim().toUpperCase();
         return q ? S.value.transactions.filter(t => String(t.symbol).indexOf(q) >= 0) : S.value.transactions;
@@ -631,8 +700,22 @@
       const txMeta = computed(() => ({
         BUY: { price: '成交價', shares: '股數' }, SELL: { price: '成交價', shares: '股數' },
         SPLIT: { price: '', shares: '比例（一拆十填 10，十合一填 0.1）' }
-      })[txForm.type]);
+      })[txForm.type] || { price: '價格', shares: '股數' });
+      const editingId = ref(null);
+      const txFormEl = ref(null);
+      function blankTx() { return { date: localDate(), type: 'BUY', symbol: '', price: '', shares: '', fee: '', note: '' }; }
+      function startEdit(t) {
+        editingId.value = t.id;
+        Object.assign(txForm, {
+          date: t.date, type: ['BUY', 'SELL', 'SPLIT'].indexOf(t.type) >= 0 ? t.type : '', symbol: t.symbol,
+          price: t.type === 'SPLIT' ? '' : t.price, shares: t.shares, fee: t.fee || '', note: t.note || ''
+        });
+        currentTab.value = '全局';
+        nextTick(() => { if (txFormEl.value) txFormEl.value.scrollIntoView({ behavior: 'smooth', block: 'center' }); });
+      }
+      function cancelEdit() { editingId.value = null; Object.assign(txForm, blankTx()); }
       const txPreview = computed(() => {
+        if (editingId.value) return '✏️ 編輯模式：送出後後端會以修改後的內容重算整個帳本（例如是否造成超賣），不符合就會拒絕。';
         const sym = txForm.symbol.trim().toUpperCase();
         const p = S.value.positions.find(x => x.symbol === sym) || null;
         const price = Number(txForm.price), sh = Number(txForm.shares), fee = Number(txForm.fee) || 0;
@@ -653,12 +736,20 @@
       async function submitTx() {
         const sym = txForm.symbol.trim().toUpperCase();
         if (!sym) return toast('請輸入代號', 'err');
-        const d = await mutate('tx_add', { tx: { date: txForm.date, type: txForm.type, symbol: sym, price: txForm.price, shares: txForm.shares, fee: txForm.fee, note: txForm.note } }, '已寫入 ' + sym + ' ' + TYPE_LABEL[txForm.type]);
+        if (!txForm.type) return toast('請選擇交易類型', 'err');
+        const tx = { date: txForm.date, type: txForm.type, symbol: sym, price: txForm.price, shares: txForm.shares, fee: txForm.fee, note: txForm.note };
+        if (editingId.value) {
+          const d = await mutate('tx_update', { id: editingId.value, tx: tx }, '已更新 ' + sym + ' 交易');
+          if (d) cancelEdit();
+          return;
+        }
+        const d = await mutate('tx_add', { tx: tx }, '已寫入 ' + sym + ' ' + TYPE_LABEL[txForm.type]);
         if (d) Object.assign(txForm, { symbol: '', price: '', shares: '', fee: '', note: '' });
       }
       async function deleteTx(t) {
         if (!confirm('刪除 ' + t.date + ' ' + t.symbol + ' ' + (TYPE_LABEL[t.type] || t.type) + ' ' + qty(t.shares) + ' 股？')) return;
-        await mutate('tx_delete', { id: t.id }, '已刪除交易');
+        const d = await mutate('tx_delete', { id: t.id }, '已刪除交易');
+        if (d && editingId.value === t.id) cancelEdit();
       }
 
       // ─── 現金 ───
@@ -709,15 +800,16 @@
       async function withdrawVideo(v) { if (confirm('撤回 ' + v.symbol + ' 的影音推薦？')) await mutate('video_withdraw', { id: v.id }, '已撤回'); }
 
       // ─── 其他操作 ───
+      async function backfillBench() { await mutate('benchmark_backfill', {}, d => d.message); }
       async function snapshotNav() { await mutate('nav_snapshot', {}, d => d.message); }
       async function runSectorMap() {
         if (!confirm('由 AI 重新定義板塊、基準 ETF 與強勢股（約 15–30 秒）。\n手動修改過的 SectorMap 會被覆蓋。繼續？')) return;
         await mutate('ai_sector_map', {}, d => d.message);
       }
       function exportCSV() {
-        const head = ['Symbol', 'Sector', 'Shares', 'Avg Cost', 'Price', 'Price Missing', 'Last Buy Date', 'Cost Basis', 'Market Value', 'Unrealized PnL', 'PnL %', 'Weight %'];
+        const head = ['Symbol', 'Sector', 'Shares', 'Avg Cost', 'Price', 'Price Source', 'Last Buy Date', 'Cost Basis', 'Market Value', 'Unrealized PnL', 'PnL %', 'Weight %'];
         const cell = v => typeof v === 'number' ? String(v) : '"' + (/^[=+\-@\t\r]/.test(String(v)) ? "'" : '') + String(v == null ? '' : v).replace(/"/g, '""') + '"';
-        const rows = S.value.positions.map(p => [p.symbol, p.sector, p.shares, p.avgCost, p.price, p.priceStale ? 'Y' : '', p.lastBuyDate || '', p.cost, p.marketValue, p.unrealized, p.unrealizedPct, p.weightPct]);
+        const rows = S.value.positions.map(p => [p.symbol, p.sector, p.shares, p.avgCost, p.price, p.priceSource, p.lastBuyDate || '', p.cost, p.marketValue, p.unrealized, p.unrealizedPct, p.weightPct]);
         const csv = '﻿' + [head].concat(rows).map(r => r.map(cell).join(',')).join('\r\n');
         const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
         const a = document.createElement('a'); a.href = url; a.download = 'Quant_Portfolio_' + localDate() + '.csv';
@@ -739,6 +831,7 @@
 
       // ─── 圖表 ───
       const navMode = ref('unit');
+      const perfMissingBench = computed(() => S.value.navSeries.length > 0 && S.value.navSeries.some(x => !x.bench));
       const allocation = computed(() => {
         const T = S.value.totals, nav = Number(T.nav) || 0;
         if (!(nav > 0)) return [];
@@ -767,17 +860,23 @@
         }
         if (el2) {
           if (navChart && navChart.canvas !== el2) { navChart.destroy(); navChart = null; }
-          if (!navChart) navChart = new Chart(el2, { type: 'line', data: { labels: [], datasets: [{ data: [], borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.10)', borderWidth: 2.5, fill: true, cubicInterpolationMode: 'monotone', pointRadius: 0, pointHitRadius: 8 }] },
+          if (!navChart) navChart = new Chart(el2, { type: 'line', data: { labels: [], datasets: [
+              { label: '組合', data: [], borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.10)', borderWidth: 2.5, fill: true, cubicInterpolationMode: 'monotone', pointRadius: 0, pointHitRadius: 8 },
+              { label: 'SPY', data: [], borderColor: '#94a3b8', borderDash: [5, 4], borderWidth: 1.75, fill: false, cubicInterpolationMode: 'monotone', pointRadius: 0, pointHitRadius: 8, spanGaps: true }] },
             options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { x: { ticks: { maxTicksLimit: 6 } }, y: { ticks: {} } } } });
           const unit = navMode.value === 'unit';
           const series = S.value.navSeries.filter(x => unit ? x.unitNav !== null : true);
           navChart.data.labels = series.map(x => x.date);
           navChart.data.datasets[0].data = series.map(x => unit ? x.unitNav : x.nav);
+          const hasBench = unit && series.some(x => x.benchIndex);
+          navChart.data.datasets[1].label = S.value.performance.benchmark || 'SPY';
+          navChart.data.datasets[1].data = hasBench ? series.map(x => x.benchIndex) : [];
+          navChart.options.plugins.legend = { display: hasBench, position: 'top', align: 'end', labels: { color: text, boxWidth: 14, boxHeight: 2, font: { size: 10, weight: 'bold' } } };
           navChart.options.scales.x.ticks.color = text; navChart.options.scales.y.ticks.color = text;
           navChart.options.scales.x.ticks.callback = function (v) { const l = this.getLabelForValue(v); return l ? l.slice(2).replace(/-/g, '/') : ''; };
           navChart.options.scales.y.ticks.callback = v => unit ? v.toFixed(0) : '$' + nf(v / 1000) + 'K';
           navChart.options.scales.x.grid = { color: grid }; navChart.options.scales.y.grid = { color: grid };
-          navChart.options.plugins.tooltip = { callbacks: { label: c => unit ? ' 指數 ' + c.parsed.y.toFixed(2) : ' ' + money(c.parsed.y) } };
+          navChart.options.plugins.tooltip = { callbacks: { label: c => ' ' + c.dataset.label + ' ' + (unit ? c.parsed.y.toFixed(2) : money(c.parsed.y)) } };
           navChart.update();
         }
       }
@@ -796,11 +895,11 @@
       });
 
       return {
-        token, state, S, sync, cacheSavedAt, busy, canWrite, toasts, loginForm, login, logout, refresh,
+        token, state, S, sync, APP_VERSION, versionMismatch, cacheSavedAt, busy, canWrite, toasts, loginForm, login, logout, refresh,
         currentTab, filteredHoldings, currentSector, currentBench, searchQuery, filteredTransactions,
-        txForm, txMeta, txPreview, submitTx, deleteTx, cashModal, cashForm, submitCash, deleteCash,
+        txForm, txMeta, txPreview, submitTx, deleteTx, editingId, txFormEl, startEdit, cancelEdit, perfMissingBench, mobileTxLimit, cashModal, cashForm, submitCash, deleteCash,
         recForm, voteOptions, recGate, generateAnalysis, submitRec, withdrawRec,
-        videoForm, submitVideo, withdrawVideo, snapshotNav, runSectorMap, exportCSV,
+        videoForm, submitVideo, withdrawVideo, snapshotNav, backfillBench, runSectorMap, exportCSV,
         chat, chatBox, sendChat, navMode, allocation, toggleDark,
         md, money, signedMoney, pct, tone, qty, timeStr, dateTimeStr, TYPE_LABEL, TYPE_STYLE, REC_LABEL, STATUS
       };
